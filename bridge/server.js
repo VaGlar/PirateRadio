@@ -23,6 +23,12 @@ const wss = new WebSocketServer({ port: listenPort });
 console.log(`Bridge listening on ws://0.0.0.0:${listenPort}`);
 
 let activeBroadcaster = null; // only one on-air source at a time
+const listeners = new Map(); // ws -> name, for listeners who passed the page's login gate and announced themselves
+
+function broadcastRoster() {
+  if (!activeBroadcaster || activeBroadcaster.readyState !== WebSocket.OPEN) return;
+  activeBroadcaster.send(JSON.stringify({ type: 'listener-roster', names: [...listeners.values()] }));
+}
 
 // Browsers don't reliably play a live, indefinite-duration webm/opus stream
 // through a plain <audio> tag — MP3 over Icecast is the combination every
@@ -105,6 +111,14 @@ wss.on('connection', (ws) => {
         ffmpeg = spawnFfmpeg(ws, stats);
         ws.send(JSON.stringify({ type: 'on-air' }));
         console.log('Broadcaster connected, streaming to Icecast via ffmpeg');
+        broadcastRoster(); // send whoever's already listening, not just future joins
+        return;
+      }
+
+      if (msg.type === 'listener-hello') {
+        const name = String(msg.name || 'Ανώνυμος').slice(0, 40);
+        listeners.set(ws, name);
+        broadcastRoster();
         return;
       }
 
@@ -143,6 +157,10 @@ wss.on('connection', (ws) => {
     if (activeBroadcaster === ws) {
       activeBroadcaster = null;
       console.log('Broadcaster disconnected');
+    }
+    if (listeners.has(ws)) {
+      listeners.delete(ws);
+      broadcastRoster();
     }
   });
 

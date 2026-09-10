@@ -113,10 +113,16 @@ const chatSend = document.getElementById('chatSend');
 const chatStatus = document.getElementById('chatStatus');
 
 let ws = null;
+let listenerName = ''; // set once the login gate is passed — see bottom of file
 
 function ensureConnection() {
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return ws;
   ws = new WebSocket(BRIDGE_URL);
+  // Announce this listener to the bridge so the broadcaster can see who's
+  // currently on the page, not just a raw connection count.
+  ws.addEventListener('open', () => {
+    if (listenerName) ws.send(JSON.stringify({ type: 'listener-hello', name: listenerName }));
+  });
   return ws;
 }
 
@@ -159,3 +165,53 @@ chatMessage.addEventListener('keydown', (e) => {
     sendMessage();
   }
 });
+
+// Simple name + shared-passphrase gate — lets the broadcaster see who's
+// listening and keeps casual passers-by out. The passphrase lives in this
+// file, which is public source on GitHub Pages, so this is a courtesy
+// lock for the crew, not real security — don't put anything sensitive
+// behind it.
+const LISTENER_PASSPHRASE = 'yohoho';
+const LOGIN_STORAGE_KEY = 'pirateradio-login';
+
+const loginGate = document.getElementById('loginGate');
+const mainContent = document.getElementById('mainContent');
+const loginNameInput = document.getElementById('loginName');
+const loginPassInput = document.getElementById('loginPass');
+const loginBtn = document.getElementById('loginBtn');
+const loginError = document.getElementById('loginError');
+
+function enterSite(name) {
+  listenerName = name;
+  loginGate.style.display = 'none';
+  mainContent.style.display = 'block';
+  chatName.value = name;
+  ensureConnection(); // announce presence right away, even before they send any chat message
+}
+
+function attemptLogin() {
+  const name = loginNameInput.value.trim();
+  if (!name) {
+    loginError.textContent = 'Γράψε το όνομά σου.';
+    return;
+  }
+  if (loginPassInput.value !== LISTENER_PASSPHRASE) {
+    loginError.textContent = 'Λάθος κωδικός.';
+    return;
+  }
+  loginError.textContent = '';
+  localStorage.setItem(LOGIN_STORAGE_KEY, JSON.stringify({ name }));
+  enterSite(name);
+}
+
+loginBtn.addEventListener('click', attemptLogin);
+loginPassInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') attemptLogin();
+});
+
+try {
+  const saved = JSON.parse(localStorage.getItem(LOGIN_STORAGE_KEY) || 'null');
+  if (saved && saved.name) enterSite(saved.name);
+} catch {
+  // corrupted localStorage value — just show the login gate normally
+}

@@ -51,6 +51,8 @@ const liveStatsEl = document.getElementById('liveStats');
 const elapsedEl = document.getElementById('elapsed');
 const listenerCountEl = document.getElementById('listenerCount');
 const peakCountEl = document.getElementById('peakCount');
+const rosterWrapEl = document.getElementById('rosterWrap');
+const rosterNamesEl = document.getElementById('rosterNames');
 const inboxEl = document.getElementById('inbox');
 const inboxListEl = document.getElementById('inboxList');
 const sysAudioCheck = document.getElementById('sysAudioCheck');
@@ -641,6 +643,8 @@ startBtn.addEventListener('click', async () => {
       cleanup();
     } else if (msg.type === 'chat-message') {
       addChatMessage(msg);
+    } else if (msg.type === 'listener-roster') {
+      updateListenerRoster(msg.names);
     }
   };
 
@@ -652,6 +656,15 @@ startBtn.addEventListener('click', async () => {
     cleanup();
   };
 });
+
+function updateListenerRoster(names) {
+  if (!names || names.length === 0) {
+    rosterWrapEl.style.display = 'none';
+    return;
+  }
+  rosterWrapEl.style.display = 'block';
+  rosterNamesEl.textContent = names.join(', ');
+}
 
 function addChatMessage(msg) {
   const empty = document.getElementById('inboxEmpty');
@@ -789,6 +802,8 @@ function cleanup() {
   isMuted = false;
   document.body.classList.remove('muted-bg');
   liveStatsEl.style.display = 'none';
+  rosterWrapEl.style.display = 'none';
+  rosterNamesEl.textContent = '';
   inboxEl.style.display = 'none';
   statusEl.textContent = 'Off air';
 }

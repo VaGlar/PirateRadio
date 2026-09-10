@@ -12,6 +12,7 @@
     --gold: #d9a441;
     --text: #ece7e1;
     --muted: #8f887e;
+    --red: #cf5454;
   }
   * { box-sizing: border-box; }
 
@@ -121,34 +122,47 @@
 
   #listenerCount { color: var(--muted); font-size: 0.85rem; margin: -14px 0 20px; }
   #listenerCount b { color: var(--gold); font-variant-numeric: tabular-nums; }
+
+  #loginError { color: var(--red); font-size: 0.85rem; margin-top: 8px; min-height: 1.2em; }
 </style>
 </head>
 <body>
   <h1>🏴‍☠️ Pirate Radio</h1>
   <p class="tagline">Πάτησε play για να ακούσεις την εκπομπή.</p>
 
-  <div id="onairSign"><span>ON AIR</span></div>
-  <div id="listenerCount">🎧 <b id="listenerCountValue">—</b> ακροατές</div>
+  <div id="loginGate" class="panel">
+    <label for="loginName">Το όνομά σου</label>
+    <input id="loginName" type="text" placeholder="π.χ. Βασίλης" maxlength="40" />
+    <label for="loginPass">Κωδικός</label>
+    <input id="loginPass" type="password" placeholder="Κωδικός πρόσβασης" />
+    <button id="loginBtn" type="button">🏴‍☠️ Είσοδος</button>
+    <div id="loginError"></div>
+  </div>
 
-  <div class="panel">
-    <audio id="radioPlayer" preload="none" x-webkit-airplay="allow" src="https://pirateradio-icecast.fly.dev/radio.mp3">
-      Ο browser σου δεν υποστηρίζει audio.
-    </audio>
+  <div id="mainContent" style="display:none">
+    <div id="onairSign"><span>ON AIR</span></div>
+    <div id="listenerCount">🎧 <b id="listenerCountValue">—</b> ακροατές</div>
 
-    <div id="playerBar">
-      <button id="playBtn" type="button" aria-label="Play">▶</button>
-      <button id="refreshBtn" type="button" aria-label="Ανανέωση" title="Ανανέωση">↻</button>
-      <input id="volumeSlider" type="range" min="0" max="100" value="100" aria-label="Ένταση" />
-      <button id="muteVolBtn" type="button" aria-label="Σίγαση">🔊</button>
-      <button id="airplayBtn" type="button" aria-label="AirPlay" title="AirPlay">📺</button>
-    </div>
+    <div class="panel">
+      <audio id="radioPlayer" preload="none" x-webkit-airplay="allow" src="https://pirateradio-icecast.fly.dev/radio.mp3">
+        Ο browser σου δεν υποστηρίζει audio.
+      </audio>
 
-    <div id="chatBox">
-      <h2>📨 Στείλε μήνυμα στην εκπομπή</h2>
-      <input id="chatName" type="text" placeholder="Το όνομά σου (προαιρετικό)" maxlength="40" />
-      <textarea id="chatMessage" rows="2" placeholder="Μήνυμα..." maxlength="300"></textarea>
-      <button id="chatSend" type="button">Αποστολή</button>
-      <div id="chatStatus"></div>
+      <div id="playerBar">
+        <button id="playBtn" type="button" aria-label="Play">▶</button>
+        <button id="refreshBtn" type="button" aria-label="Ανανέωση" title="Ανανέωση">↻</button>
+        <input id="volumeSlider" type="range" min="0" max="100" value="100" aria-label="Ένταση" />
+        <button id="muteVolBtn" type="button" aria-label="Σίγαση">🔊</button>
+        <button id="airplayBtn" type="button" aria-label="AirPlay" title="AirPlay">📺</button>
+      </div>
+
+      <div id="chatBox">
+        <h2>📨 Στείλε μήνυμα στην εκπομπή</h2>
+        <input id="chatName" type="text" placeholder="Το όνομά σου (προαιρετικό)" maxlength="40" />
+        <textarea id="chatMessage" rows="2" placeholder="Μήνυμα..." maxlength="300"></textarea>
+        <button id="chatSend" type="button">Αποστολή</button>
+        <div id="chatStatus"></div>
+      </div>
     </div>
   </div>
 
