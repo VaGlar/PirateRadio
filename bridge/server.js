@@ -29,7 +29,7 @@ let activeBroadcaster = null; // only one on-air source at a time
 // real internet radio setup relies on for that reason. ffmpeg both
 // transcodes MediaRecorder's webm/opus output to MP3 and speaks Icecast's
 // source protocol itself (far more robust than a hand-rolled HTTP client).
-function spawnFfmpeg(ws) {
+function spawnFfmpeg(ws, stats) {
   const tls = Number(ICECAST_PORT) === 443;
   const icecastUrl = `icecast://source@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}`;
 
@@ -59,7 +59,7 @@ function spawnFfmpeg(ws) {
   });
 
   ffmpeg.on('exit', (code, signal) => {
-    console.log(`ffmpeg exited (code=${code}, signal=${signal})`);
+    console.log(`ffmpeg exited (code=${code}, signal=${signal}) after +${Date.now() - stats.onAirAt}ms, ${stats.chunkCount} chunks, ${stats.totalBytes}B total`);
     if (code !== 0 && code !== null) {
       ws.send(JSON.stringify({ type: 'error', message: `ffmpeg/Icecast connection failed (exit code ${code}) — check bridge logs` }));
     }
@@ -71,6 +71,7 @@ function spawnFfmpeg(ws) {
 wss.on('connection', (ws) => {
   let authed = false;
   let ffmpeg = null;
+  const stats = { onAirAt: 0, totalBytes: 0, chunkCount: 0 };
 
   ws.on('message', (data, isBinary) => {
     if (!authed) {
@@ -93,14 +94,24 @@ wss.on('connection', (ws) => {
       }
       authed = true;
       activeBroadcaster = ws;
-      ffmpeg = spawnFfmpeg(ws);
+      stats.onAirAt = Date.now();
+      ffmpeg = spawnFfmpeg(ws, stats);
       ws.send(JSON.stringify({ type: 'on-air' }));
       console.log('Broadcaster connected, streaming to Icecast via ffmpeg');
       return;
     }
 
     if (isBinary && ffmpeg && ffmpeg.stdin.writable) {
-      ffmpeg.stdin.write(data);
+      stats.totalBytes += data.length;
+      stats.chunkCount += 1;
+      const ok = ffmpeg.stdin.write(data);
+      // Log every 8th chunk (~2s at the browser's 250ms timeslice) so we can
+      // see whether audio kept flowing right up to a disconnect, or stalled
+      // earlier upstream (browser/WebSocket) before ffmpeg's own connection
+      // to Icecast gave up.
+      if (stats.chunkCount % 8 === 0) {
+        console.log(`+${Date.now() - stats.onAirAt}ms: chunk #${stats.chunkCount}, ${data.length}B (total ${stats.totalBytes}B)${ok ? '' : ' [ffmpeg stdin backpressure]'}`);
+      }
     }
   });
 
