@@ -43,7 +43,6 @@ const statusEl = document.getElementById('status');
 const errorEl = document.getElementById('error');
 const monitorToggle = document.getElementById('monitorToggle');
 const muteBtn = document.getElementById('muteBtn');
-const muteHintEl = document.getElementById('muteHint');
 const liveControlsEl = document.getElementById('liveControls');
 const liveStatsEl = document.getElementById('liveStats');
 const elapsedEl = document.getElementById('elapsed');
@@ -649,7 +648,6 @@ function goLive() {
   setupEl.style.display = 'none';
   stopBtn.style.display = 'inline-block';
   muteBtn.style.display = 'block';
-  muteHintEl.style.display = 'block';
   liveControlsEl.style.display = 'block';
   setMuted(false);
   statusEl.textContent = 'Ζωντανά τώρα';
@@ -728,7 +726,6 @@ function cleanup() {
   setupEl.style.display = 'block';
   stopBtn.style.display = 'none';
   muteBtn.style.display = 'none';
-  muteHintEl.style.display = 'none';
   liveControlsEl.style.display = 'none';
   isMuted = false;
   document.body.classList.remove('muted-bg');

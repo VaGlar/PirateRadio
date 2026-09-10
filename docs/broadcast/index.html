@@ -123,10 +123,10 @@
       0 0 34px #d9a441,
       0 0 55px #d9a441;
   }
-  #muteHint { display: none; font-size: 0.78rem; color: var(--muted); margin: -8px 0 14px; text-align: center; }
 
   #liveControls { display: none; }
   .checkRow { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; margin: 8px 0; }
+  .controlsRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .checkRow input { width: auto; margin: 0; accent-color: var(--gold); }
   #mixSliderWrap { display: none; margin-top: 10px; }
   #mixSliderWrap .labels { display: flex; justify-content: space-between; font-size: 0.74rem; color: var(--muted); }
@@ -183,7 +183,7 @@
   #liveStats .row b { font-variant-numeric: tabular-nums; color: var(--gold); }
   #inbox { display: none; }
   #inbox h3 { font-size: 0.95rem; color: var(--muted); font-weight: 600; margin: 0 0 10px; }
-  #inboxList { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  #inboxList { max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
   #inboxList .msg { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; }
   #inboxList .msg .name { font-weight: bold; color: var(--gold); }
   #inboxList .msg .time { float: right; color: var(--muted); font-size: 0.75rem; }
@@ -266,7 +266,6 @@
 
   <!-- While On Air -->
   <button id="muteBtn" type="button"><span>ON AIR</span></button>
-  <div id="muteHint">Πλήκτρο <b>Space</b> κάνει το ίδιο (όσο δεν πληκτρολογείς σε πεδίο).</div>
 
   <div class="grid2">
     <div class="col">
@@ -276,17 +275,19 @@
       </div>
 
       <div id="liveControls" class="panel">
-        <div class="checkRow">
-          <input id="sysAudioCheck" type="checkbox" />
-          <label for="sysAudioCheck" style="margin:0">🎵 Spotify</label>
+        <div class="controlsRow">
+          <div class="checkRow" style="margin:0">
+            <input id="sysAudioCheck" type="checkbox" />
+            <label for="sysAudioCheck" style="margin:0">🎵 Spotify</label>
+          </div>
+          <div class="checkRow" style="margin:0">
+            <input id="monitorToggle" type="checkbox" checked />
+            <label for="monitorToggle" style="margin:0">🎧 Επιστροφή</label>
+          </div>
         </div>
         <div id="mixSliderWrap">
           <div class="labels"><span>🎤 Μικρόφωνο</span><span>🎵 Μουσική</span></div>
           <input id="mixSlider" type="range" min="0" max="100" step="1" value="50" />
-        </div>
-        <div class="checkRow">
-          <input id="monitorToggle" type="checkbox" checked />
-          <label for="monitorToggle" style="margin:0">🎧 Άκου τον εαυτό σου</label>
         </div>
       </div>
     </div>
@@ -297,12 +298,14 @@
         <div class="row"><span>🎧 Ακροατές τώρα</span><b id="listenerCount">—</b></div>
         <div class="row"><span>📈 Peak ακροατές</span><b id="peakCount">—</b></div>
       </div>
-
-      <div id="inbox" class="panel">
-        <h3>📨 Μηνύματα ακροατών</h3>
-        <div id="inboxList"><div id="inboxEmpty">Κανένα μήνυμα ακόμα.</div></div>
-      </div>
     </div>
+  </div>
+
+  <!-- Messages get the whole bottom of the page — this is the one thing
+       that keeps growing during a show, everything above it is fixed-size. -->
+  <div id="inbox" class="panel">
+    <h3>📨 Μηνύματα ακροατών</h3>
+    <div id="inboxList"><div id="inboxEmpty">Κανένα μήνυμα ακόμα.</div></div>
   </div>
 
   <button id="stopBtn" style="display:none">⏹ Off Air</button>
