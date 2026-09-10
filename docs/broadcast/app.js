@@ -351,11 +351,32 @@ function fillDeviceSelects(selects, devices, fallbackLabel) {
   });
 }
 
+// Windows (and the browser) exposes every real device twice or three times
+// over — a "default" entry, a "communications" entry, and the actual named
+// device — so 2 physical headsets can show up as 6-8 dropdown rows. Those
+// duplicates share the real device's groupId, so keep only one row per
+// groupId (preferring the entry that isn't the synthetic default/communications
+// one, since that's the one with the real, recognizable label).
+function dedupeByDevice(devices) {
+  const byGroup = new Map();
+  for (const d of devices) {
+    const key = d.groupId || d.deviceId;
+    const isSynthetic = d.deviceId === 'default' || d.deviceId === 'communications';
+    const existing = byGroup.get(key);
+    if (!existing || (isSynthetic === false && (existing.deviceId === 'default' || existing.deviceId === 'communications'))) {
+      byGroup.set(key, d);
+    }
+  }
+  return [...byGroup.values()];
+}
+
 async function listMicrophones() {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
-    fillDeviceSelects([micSelect, mic2Select], devices.filter((d) => d.kind === 'audioinput'), 'Μικρόφωνο');
-    fillDeviceSelects([output1Select, output2Select], devices.filter((d) => d.kind === 'audiooutput'), 'Έξοδος');
+    const mics = dedupeByDevice(devices.filter((d) => d.kind === 'audioinput'));
+    const outputs = dedupeByDevice(devices.filter((d) => d.kind === 'audiooutput'));
+    fillDeviceSelects([micSelect, mic2Select], mics, 'Μικρόφωνο');
+    fillDeviceSelects([output1Select, output2Select], outputs, 'Έξοδος');
   } catch {
     // enumerateDevices can fail before permission is granted on some browsers — ignore, list refreshes after getUserMedia.
   }
