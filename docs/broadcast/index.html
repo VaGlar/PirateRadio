@@ -66,10 +66,10 @@
   <div id="sysAudioHint">Θα σου ζητηθεί να διαλέξεις tab ή οθόνη — τσέκαρε οπωσδήποτε "Share audio" / "Share tab audio". Δουλεύει σε Chrome/Edge, χωρίς καμία εγκατάσταση.</div>
   <div id="sysAudioStatus">
     <div class="ok">✅ Ήχος υπολογιστή ενεργός — μιξάρεται με το μικρόφωνο</div>
-    <label for="micVolume">Ένταση μικροφώνου</label>
-    <input id="micVolume" type="range" min="0" max="1.5" step="0.05" value="1" />
-    <label for="sysVolume">Ένταση μουσικής</label>
-    <input id="sysVolume" type="range" min="0" max="1.5" step="0.05" value="0.6" />
+    <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#6b7280;">
+      <span>🎤 Μικρόφωνο</span><span>🎵 Μουσική</span>
+    </div>
+    <input id="mixSlider" type="range" min="0" max="100" step="1" value="50" />
     <button id="sysAudioStopBtn" type="button">✖ Αφαίρεση ήχου υπολογιστή</button>
   </div>
 

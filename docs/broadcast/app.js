@@ -22,8 +22,7 @@ const sysAudioBtn = document.getElementById('sysAudioBtn');
 const sysAudioHint = document.getElementById('sysAudioHint');
 const sysAudioStatus = document.getElementById('sysAudioStatus');
 const sysAudioStopBtn = document.getElementById('sysAudioStopBtn');
-const micVolumeEl = document.getElementById('micVolume');
-const sysVolumeEl = document.getElementById('sysVolume');
+const mixSliderEl = document.getElementById('mixSlider');
 
 let ws = null;
 let mediaRecorder = null;
@@ -103,14 +102,27 @@ function startMeterLoop() {
   tick();
 }
 
+// Single crossfader instead of two independent volume sliders: 0 = full
+// mic, 100 = full music, 50 = equal-power blend of both (cos/sin instead
+// of a straight linear ramp so the perceived loudness stays roughly
+// constant across the slider instead of dipping in the middle). Mic stays
+// at full volume regardless of the slider until music is actually
+// attached — there's nothing to fade against yet.
+function updateMixGains() {
+  const pos = Number(mixSliderEl.value) / 100;
+  if (micGainNode) micGainNode.gain.value = sysGainNode ? Math.cos((pos * Math.PI) / 2) : 1;
+  if (sysGainNode) sysGainNode.gain.value = Math.sin((pos * Math.PI) / 2);
+}
+mixSliderEl.addEventListener('input', updateMixGains);
+
 function attachMic(newStream) {
   ensureAudioGraph();
   if (micSourceNode) micSourceNode.disconnect();
   micSourceNode = audioCtx.createMediaStreamSource(newStream);
   if (!micGainNode) micGainNode = audioCtx.createGain();
-  micGainNode.gain.value = Number(micVolumeEl.value);
   micSourceNode.connect(micGainNode);
   micGainNode.connect(limiter);
+  updateMixGains();
 }
 
 async function attachSysAudio() {
@@ -126,9 +138,9 @@ async function attachSysAudio() {
   sysStream = new MediaStream(audioTracks);
   sysSourceNode = audioCtx.createMediaStreamSource(sysStream);
   sysGainNode = audioCtx.createGain();
-  sysGainNode.gain.value = Number(sysVolumeEl.value);
   sysSourceNode.connect(sysGainNode);
   sysGainNode.connect(limiter);
+  updateMixGains();
 
   audioTracks[0].addEventListener('ended', detachSysAudio); // browser's own "Stop sharing" bar
 }
@@ -140,6 +152,7 @@ function detachSysAudio() {
   sysGainNode = null;
   if (sysStream) sysStream.getTracks().forEach((t) => t.stop());
   sysStream = null;
+  updateMixGains(); // back to mic-only, full volume
   sysAudioStatus.style.display = 'none';
   sysAudioBtn.style.display = 'block';
   sysAudioHint.style.display = 'block';
@@ -157,12 +170,6 @@ sysAudioBtn.addEventListener('click', async () => {
   }
 });
 sysAudioStopBtn.addEventListener('click', detachSysAudio);
-micVolumeEl.addEventListener('input', () => {
-  if (micGainNode) micGainNode.gain.value = Number(micVolumeEl.value);
-});
-sysVolumeEl.addEventListener('input', () => {
-  if (sysGainNode) sysGainNode.gain.value = Number(sysVolumeEl.value);
-});
 
 // Mutes the mic only (system audio, if attached, keeps playing) by
 // disabling the track rather than stopping it — MediaRecorder keeps
