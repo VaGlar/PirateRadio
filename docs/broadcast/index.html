@@ -133,6 +133,10 @@
   #inboxList .msg .name { font-weight: bold; color: var(--gold); }
   #inboxList .msg .time { float: right; color: var(--muted); font-size: 0.75rem; }
   #inboxEmpty { color: var(--muted); font-size: 0.85rem; }
+
+  #hostsLive { display: none; }
+  .hostRow { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; font-size: 0.92rem; }
+  .hostRow .lamp { margin-left: 10px; }
 </style>
 </head>
 <body>
@@ -141,6 +145,9 @@
   <!-- Before On Air -->
   <div id="setup" class="panel">
     <input id="password" type="password" placeholder="Κωδικός εκπομπής" />
+
+    <label for="name1Input">Όνομα παραγωγού 1</label>
+    <input id="name1Input" type="text" placeholder="π.χ. Βασίλης" maxlength="30" />
 
     <label for="micSelect">Μικρόφωνο 1</label>
     <select id="micSelect"><option value="">(προεπιλογή συστήματος)</option></select>
@@ -157,6 +164,9 @@
       <label for="mic2Check" style="margin:0">👥 Δεύτερο άτομο (2ο μικρόφωνο)</label>
     </div>
     <div id="mic2Wrap" style="display:none">
+      <label for="name2Input">Όνομα παραγωγού 2</label>
+      <input id="name2Input" type="text" placeholder="π.χ. Ηλίας" maxlength="30" />
+
       <label for="mic2Select">Μικρόφωνο 2</label>
       <select id="mic2Select"><option value="">(προεπιλογή συστήματος)</option></select>
 
@@ -182,6 +192,11 @@
   <!-- While On Air -->
   <button id="muteBtn" type="button"><span>ON AIR</span></button>
   <div id="muteHint">Πλήκτρο <b>Space</b> κάνει το ίδιο (όσο δεν πληκτρολογείς σε πεδίο).</div>
+
+  <div id="hostsLive" class="panel">
+    <div class="hostRow"><span id="hostName1">Παραγωγός 1</span><div id="liveLamp1" class="lamp"></div></div>
+    <div class="hostRow" id="hostRow2" style="display:none"><span id="hostName2">Παραγωγός 2</span><div id="liveLamp2" class="lamp"></div></div>
+  </div>
 
   <div id="liveControls" class="panel">
     <div class="checkRow">

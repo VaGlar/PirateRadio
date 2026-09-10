@@ -14,6 +14,14 @@ const meterBar = document.getElementById('meterBar');
 const meter2Bar = document.getElementById('meter2Bar');
 const lamp1 = document.getElementById('lamp1');
 const lamp2 = document.getElementById('lamp2');
+const name1Input = document.getElementById('name1Input');
+const name2Input = document.getElementById('name2Input');
+const hostsLiveEl = document.getElementById('hostsLive');
+const hostRow2El = document.getElementById('hostRow2');
+const hostName1El = document.getElementById('hostName1');
+const hostName2El = document.getElementById('hostName2');
+const liveLamp1 = document.getElementById('liveLamp1');
+const liveLamp2 = document.getElementById('liveLamp2');
 const setupEl = document.getElementById('setup');
 const statusEl = document.getElementById('status');
 const errorEl = document.getElementById('error');
@@ -132,11 +140,15 @@ function startMeterLoop() {
   const tick = () => {
     const level1 = meterLevel(micAnalyser, buf1);
     meterBar.style.width = level1 + '%';
-    lamp1.classList.toggle('on', level1 > LAMP_THRESHOLD);
+    const on1 = level1 > LAMP_THRESHOLD;
+    lamp1.classList.toggle('on', on1);
+    liveLamp1.classList.toggle('on', on1);
 
     const level2 = meterLevel(mic2Analyser, buf2);
     meter2Bar.style.width = level2 + '%';
-    lamp2.classList.toggle('on', level2 > LAMP_THRESHOLD);
+    const on2 = level2 > LAMP_THRESHOLD;
+    lamp2.classList.toggle('on', on2);
+    liveLamp2.classList.toggle('on', on2);
 
     meterRAF = requestAnimationFrame(tick);
   };
@@ -555,6 +567,11 @@ function goLive() {
   setMuted(false);
   statusEl.textContent = 'Ζωντανά τώρα';
 
+  hostName1El.textContent = name1Input.value.trim() || 'Παραγωγός 1';
+  hostRow2El.style.display = mic2Check.checked ? 'flex' : 'none';
+  if (mic2Check.checked) hostName2El.textContent = name2Input.value.trim() || 'Παραγωγός 2';
+  hostsLiveEl.style.display = 'block';
+
   updateMonitor();
 
   onAirAt = Date.now();
@@ -608,6 +625,9 @@ function cleanup() {
   meter2Bar.style.width = '0%';
   lamp1.classList.remove('on');
   lamp2.classList.remove('on');
+  liveLamp1.classList.remove('on');
+  liveLamp2.classList.remove('on');
+  hostsLiveEl.style.display = 'none';
 
   if (elapsedTimer) clearInterval(elapsedTimer);
   if (statsTimer) clearInterval(statsTimer);
