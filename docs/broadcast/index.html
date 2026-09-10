@@ -19,7 +19,7 @@
 
   body {
     font-family: system-ui, sans-serif;
-    max-width: 440px;
+    max-width: 860px;
     margin: 0 auto;
     padding: 44px 20px 60px;
     text-align: center;
@@ -29,6 +29,15 @@
     transition: background 200ms;
   }
   body.muted-bg { background: #211f1c; }
+
+  /* Two-column layout so the whole producer UI fits a small laptop screen
+     without scrolling — ON AIR stays full-width on its own, everything
+     else pairs up side by side. Collapses to one column on narrow windows. */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .grid2 .col > .panel:last-child { margin-bottom: 0; }
+  @media (max-width: 680px) {
+    .grid2 { grid-template-columns: 1fr; }
+  }
 
   h1 { font-size: 1.35rem; margin: 0 0 24px; }
 
@@ -160,43 +169,49 @@
   <div id="setup" class="panel">
     <input id="password" type="password" placeholder="Κωδικός εκπομπής" />
 
-    <label for="name1Input">Όνομα παραγωγού 1</label>
-    <input id="name1Input" type="text" placeholder="π.χ. Βασίλης" maxlength="30" />
+    <div class="grid2">
+      <div class="col">
+        <label for="name1Input">Όνομα παραγωγού 1</label>
+        <input id="name1Input" type="text" placeholder="π.χ. Βασίλης" maxlength="30" />
 
-    <label for="micSelect">Μικρόφωνο 1</label>
-    <select id="micSelect"><option value="">(προεπιλογή συστήματος)</option></select>
+        <label for="micSelect">Μικρόφωνο 1</label>
+        <select id="micSelect"><option value="">(προεπιλογή συστήματος)</option></select>
 
-    <button id="testBtn" type="button">🎤 Δοκιμή μικροφώνου 1</button>
-    <div class="meterRow">
-      <div class="meterWrap"><div id="meterBar" class="meterBar"></div></div>
-      <div id="lamp1" class="lamp" title="Μικρόφωνο 1"></div>
-    </div>
-    <div class="meterHint">Μίλησε δυνατά — η μπάρα και το λαμπάκι πρέπει να κινούνται.</div>
-
-    <div class="checkRow">
-      <input id="mic2Check" type="checkbox" />
-      <label for="mic2Check" style="margin:0">👥 Δεύτερο άτομο (2ο μικρόφωνο)</label>
-    </div>
-    <div id="mic2Wrap" style="display:none">
-      <label for="name2Input">Όνομα παραγωγού 2</label>
-      <input id="name2Input" type="text" placeholder="π.χ. Ηλίας" maxlength="30" />
-
-      <label for="mic2Select">Μικρόφωνο 2</label>
-      <select id="mic2Select"><option value="">(προεπιλογή συστήματος)</option></select>
-
-      <button id="test2Btn" type="button">🎤 Δοκιμή μικροφώνου 2</button>
-      <div class="meterRow">
-        <div class="meterWrap"><div id="meter2Bar" class="meterBar"></div></div>
-        <div id="lamp2" class="lamp" title="Μικρόφωνο 2"></div>
+        <button id="testBtn" type="button">🎤 Δοκιμή μικροφώνου 1</button>
+        <div class="meterRow">
+          <div class="meterWrap"><div id="meterBar" class="meterBar"></div></div>
+          <div id="lamp1" class="lamp" title="Μικρόφωνο 1"></div>
+        </div>
+        <div class="meterHint">Μίλησε δυνατά — η μπάρα και το λαμπάκι πρέπει να κινούνται.</div>
       </div>
-      <div class="meterHint">Όσο δοκιμάζεις ένα μικρόφωνο, το άλλο κλείνει αυτόματα — ακούγεστε και οι δύο κανονικά στα ακουστικά σας.</div>
 
-      <label for="output1Select">🔈 Έξοδος (ακουστικά) — Άτομο 1</label>
-      <select id="output1Select"><option value="">(προεπιλογή συστήματος)</option></select>
-      <label for="output2Select">🔈 Έξοδος (ακουστικά) — Άτομο 2</label>
-      <select id="output2Select"><option value="">(προεπιλογή συστήματος)</option></select>
-      <div id="outputHint" style="font-size:0.78rem; color: var(--muted); margin-top:-6px;">
-        Διάλεξε ρητά διαφορετική συσκευή για τον καθένα, αλλιώς και οι δύο θα πάνε στην ίδια προεπιλεγμένη — ο ένας από τους δύο δεν θα ακούει τίποτα στο "Άκου τον εαυτό σου".
+      <div class="col">
+        <div class="checkRow">
+          <input id="mic2Check" type="checkbox" />
+          <label for="mic2Check" style="margin:0">👥 Δεύτερο άτομο (2ο μικρόφωνο)</label>
+        </div>
+        <div id="mic2Wrap" style="display:none">
+          <label for="name2Input">Όνομα παραγωγού 2</label>
+          <input id="name2Input" type="text" placeholder="π.χ. Ηλίας" maxlength="30" />
+
+          <label for="mic2Select">Μικρόφωνο 2</label>
+          <select id="mic2Select"><option value="">(προεπιλογή συστήματος)</option></select>
+
+          <button id="test2Btn" type="button">🎤 Δοκιμή μικροφώνου 2</button>
+          <div class="meterRow">
+            <div class="meterWrap"><div id="meter2Bar" class="meterBar"></div></div>
+            <div id="lamp2" class="lamp" title="Μικρόφωνο 2"></div>
+          </div>
+          <div class="meterHint">Όσο δοκιμάζεις ένα μικρόφωνο, το άλλο κλείνει αυτόματα — ακούγεστε και οι δύο κανονικά στα ακουστικά σας.</div>
+
+          <label for="output1Select">🔈 Έξοδος (ακουστικά) — Άτομο 1</label>
+          <select id="output1Select"><option value="">(προεπιλογή συστήματος)</option></select>
+          <label for="output2Select">🔈 Έξοδος (ακουστικά) — Άτομο 2</label>
+          <select id="output2Select"><option value="">(προεπιλογή συστήματος)</option></select>
+          <div id="outputHint" style="font-size:0.78rem; color: var(--muted); margin-top:-6px;">
+            Διάλεξε ρητά διαφορετική συσκευή για τον καθένα, αλλιώς και οι δύο θα πάνε στην ίδια προεπιλεγμένη — ο ένας από τους δύο δεν θα ακούει τίποτα στο "Άκου τον εαυτό σου".
+          </div>
+        </div>
       </div>
     </div>
 
@@ -207,23 +222,40 @@
   <button id="muteBtn" type="button"><span>ON AIR</span></button>
   <div id="muteHint">Πλήκτρο <b>Space</b> κάνει το ίδιο (όσο δεν πληκτρολογείς σε πεδίο).</div>
 
-  <div id="hostsLive" class="panel">
-    <div class="hostRow"><span id="hostName1">Παραγωγός 1</span><div id="liveLamp1" class="lamp"></div></div>
-    <div class="hostRow" id="hostRow2" style="display:none"><span id="hostName2">Παραγωγός 2</span><div id="liveLamp2" class="lamp"></div></div>
-  </div>
+  <div class="grid2">
+    <div class="col">
+      <div id="hostsLive" class="panel">
+        <div class="hostRow"><span id="hostName1">Παραγωγός 1</span><div id="liveLamp1" class="lamp"></div></div>
+        <div class="hostRow" id="hostRow2" style="display:none"><span id="hostName2">Παραγωγός 2</span><div id="liveLamp2" class="lamp"></div></div>
+      </div>
 
-  <div id="liveControls" class="panel">
-    <div class="checkRow">
-      <input id="sysAudioCheck" type="checkbox" />
-      <label for="sysAudioCheck" style="margin:0">🎵 Spotify</label>
+      <div id="liveControls" class="panel">
+        <div class="checkRow">
+          <input id="sysAudioCheck" type="checkbox" />
+          <label for="sysAudioCheck" style="margin:0">🎵 Spotify</label>
+        </div>
+        <div id="mixSliderWrap">
+          <div class="labels"><span>🎤 Μικρόφωνο</span><span>🎵 Μουσική</span></div>
+          <input id="mixSlider" type="range" min="0" max="100" step="1" value="50" />
+        </div>
+        <div class="checkRow">
+          <input id="monitorToggle" type="checkbox" checked />
+          <label for="monitorToggle" style="margin:0">🎧 Άκου τον εαυτό σου</label>
+        </div>
+      </div>
     </div>
-    <div id="mixSliderWrap">
-      <div class="labels"><span>🎤 Μικρόφωνο</span><span>🎵 Μουσική</span></div>
-      <input id="mixSlider" type="range" min="0" max="100" step="1" value="50" />
-    </div>
-    <div class="checkRow">
-      <input id="monitorToggle" type="checkbox" checked />
-      <label for="monitorToggle" style="margin:0">🎧 Άκου τον εαυτό σου</label>
+
+    <div class="col">
+      <div id="liveStats" class="panel">
+        <div class="row"><span>⏱️ Διάρκεια</span><b id="elapsed">00:00</b></div>
+        <div class="row"><span>🎧 Ακροατές τώρα</span><b id="listenerCount">—</b></div>
+        <div class="row"><span>📈 Peak ακροατές</span><b id="peakCount">—</b></div>
+      </div>
+
+      <div id="inbox" class="panel">
+        <h3>📨 Μηνύματα ακροατών</h3>
+        <div id="inboxList"><div id="inboxEmpty">Κανένα μήνυμα ακόμα.</div></div>
+      </div>
     </div>
   </div>
 
@@ -231,17 +263,6 @@
 
   <div id="status">Off air</div>
   <div id="error"></div>
-
-  <div id="liveStats" class="panel">
-    <div class="row"><span>⏱️ Διάρκεια</span><b id="elapsed">00:00</b></div>
-    <div class="row"><span>🎧 Ακροατές τώρα</span><b id="listenerCount">—</b></div>
-    <div class="row"><span>📈 Peak ακροατές</span><b id="peakCount">—</b></div>
-  </div>
-
-  <div id="inbox" class="panel">
-    <h3>📨 Μηνύματα ακροατών</h3>
-    <div id="inboxList"><div id="inboxEmpty">Κανένα μήνυμα ακόμα.</div></div>
-  </div>
 
   <audio id="monitorAudio1" style="display:none"></audio>
   <audio id="monitorAudio2" style="display:none"></audio>
