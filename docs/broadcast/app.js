@@ -245,12 +245,25 @@ function rampGain(node, target) {
   node.gain.linearRampToValueAtTime(target, now + MIX_RAMP_SEC);
 }
 
+// Mic capture (with echoCancellation/AGC deliberately off — see acquireStream)
+// is naturally much quieter than tab/system audio, which is usually already
+// loudness-normalized. Without correcting for that, "50/50" on the slider
+// sounds like mostly music. These multipliers only kick in once music is
+// actually attached — solo mic broadcasts are unaffected. Starting values;
+// nudge them if the balance still feels off either way.
+const MIC_MAKEUP_GAIN = 2.0;
+const MUSIC_GAIN_SCALE = 0.6;
+
 function updateMixGains() {
   const pos = Number(mixSliderEl.value) / 100;
-  const micLevel = sysGainNode ? Math.cos((pos * Math.PI) / 2) : 1;
-  rampGain(micGainNode, micLevel);
-  rampGain(mic2GainNode, micLevel);
-  rampGain(sysGainNode, Math.sin((pos * Math.PI) / 2));
+  if (sysGainNode) {
+    rampGain(micGainNode, Math.cos((pos * Math.PI) / 2) * MIC_MAKEUP_GAIN);
+    rampGain(mic2GainNode, Math.cos((pos * Math.PI) / 2) * MIC_MAKEUP_GAIN);
+    rampGain(sysGainNode, Math.sin((pos * Math.PI) / 2) * MUSIC_GAIN_SCALE);
+  } else {
+    rampGain(micGainNode, 1);
+    rampGain(mic2GainNode, 1);
+  }
 }
 mixSliderEl.addEventListener('input', updateMixGains);
 
