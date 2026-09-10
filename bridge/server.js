@@ -53,11 +53,26 @@ function openIcecastRequest(ws) {
   if (transport === http) {
     req.useChunkedEncodingByDefault = false;
   }
+  req.on('socket', (socket) => {
+    console.log('Icecast request: socket assigned');
+    socket.on('connect', () => console.log('Icecast request: TCP connected'));
+    socket.on('secureConnect', () => console.log('Icecast request: TLS handshake complete'));
+  });
+  // If Icecast (or a proxy in front of it) never responds at all, don't
+  // hang forever — surface that explicitly instead of looking identical to
+  // a working stream.
+  req.setTimeout(15000, () => {
+    console.error('Icecast request timed out waiting for a response (15s)');
+    ws.send(JSON.stringify({ type: 'error', message: 'Icecast never responded (timeout) — likely a proxy/network issue' }));
+    req.destroy();
+  });
   req.on('error', (err) => {
     console.error('Icecast connection error:', err.message);
     ws.send(JSON.stringify({ type: 'error', message: 'Icecast connection failed: ' + err.message }));
   });
   req.on('response', (res) => {
+    console.log(`Icecast responded with status ${res.statusCode}`);
+    res.on('data', (chunk) => console.log(`Icecast response body: ${chunk.toString().slice(0, 200)}`));
     if (res.statusCode >= 400) {
       console.error(`Icecast rejected the source connection: ${res.statusCode}`);
       ws.send(JSON.stringify({ type: 'error', message: `Icecast rejected the connection (${res.statusCode})` }));
