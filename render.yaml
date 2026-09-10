@@ -1,28 +1,14 @@
 services:
   - type: web
-    name: pirateradio-icecast
-    env: docker
-    dockerfilePath: ./icecast/Dockerfile
-    dockerContext: ./icecast
-    plan: free
-    envVars:
-      - key: ICECAST_SOURCE_PASSWORD
-        sync: false
-      - key: ICECAST_ADMIN_PASSWORD
-        sync: false
-
-  - type: web
     name: pirateradio-bridge
     env: docker
     dockerfilePath: ./bridge/Dockerfile
     dockerContext: ./bridge
     plan: free
     envVars:
-      # Render's free plan doesn't reliably resolve internal
-      # service-to-service hostnames, so the bridge talks to Icecast over
-      # its public URL instead (same as listeners do). Set these manually
-      # after both services are up, e.g.:
-      #   ICECAST_HOST = pirateradio-icecast.onrender.com
+      # Icecast now runs on Fly.io (see icecast/fly.toml) — the bridge talks
+      # to it over its public URL, e.g.:
+      #   ICECAST_HOST = pirateradio-icecast.fly.dev
       #   ICECAST_PORT = 443
       - key: ICECAST_HOST
         sync: false

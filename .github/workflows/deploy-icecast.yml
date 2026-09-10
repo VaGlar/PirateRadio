@@ -1,0 +1,36 @@
+name: Deploy Icecast to Fly.io
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'icecast/**'
+      - '.github/workflows/deploy-icecast.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency: deploy-icecast-fly
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Ensure Fly app exists
+        working-directory: icecast
+        run: flyctl apps create pirateradio-icecast --org personal || true
+
+      - name: Set Icecast secrets
+        working-directory: icecast
+        run: |
+          flyctl secrets set \
+            ICECAST_SOURCE_PASSWORD="${{ secrets.ICECAST_SOURCE_PASSWORD }}" \
+            ICECAST_ADMIN_PASSWORD="${{ secrets.ICECAST_ADMIN_PASSWORD }}" \
+            --app pirateradio-icecast
+
+      - name: Deploy
+        working-directory: icecast
+        run: flyctl deploy --remote-only

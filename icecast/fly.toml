@@ -1,0 +1,18 @@
+app = "pirateradio-icecast"
+primary_region = "fra"
+
+[build]
+
+[env]
+  ICECAST_HOSTNAME = "pirateradio-icecast.fly.dev"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

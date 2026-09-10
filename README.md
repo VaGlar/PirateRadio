@@ -7,76 +7,93 @@
 ## Πώς δουλεύει
 
 ```
-[broadcaster browser] --WebSocket--> [bridge] --HTTP PUT--> [Icecast] <--HTTP-- [listener <audio>]
+[broadcaster browser] --WebSocket--> [bridge: Render] --HTTP PUT--> [Icecast: Fly.io] <--HTTP-- [listener <audio>]
 ```
 
-- **Icecast** (`icecast/`) — ο streaming server. Δέχεται το live audio και το
-  αναμεταδίδει σε όποιον ανοίγει το mount URL.
-- **bridge** (`bridge/`) — μικρό Node server που παίρνει το mic audio από τον
-  broadcaster μέσω WebSocket και το προωθεί στο Icecast (ο browser δεν μιλάει
-  απευθείας το πρωτόκολλο source του Icecast).
+- **Icecast** (`icecast/`) — ο streaming server, τρέχει στο **Fly.io**. Δέχεται
+  το live audio και το αναμεταδίδει σε όποιον ανοίγει το mount URL.
+- **bridge** (`bridge/`) — μικρό Node server, τρέχει στο **Render**. Παίρνει
+  το mic audio από τον broadcaster μέσω WebSocket και το προωθεί στο Icecast
+  (ο browser δεν μιλάει απευθείας το πρωτόκολλο source του Icecast).
 - **docs/** — οι δύο web σελίδες: `docs/index.html` (ακρόαση) και
-  `docs/broadcast/index.html` (εκπομπή). Ο φάκελος λέγεται `docs/` επίτηδες
-  ώστε να μπορεί να σερβιριστεί απευθείας από **GitHub Pages**.
+  `docs/broadcast/index.html` (εκπομπή), σερβιρισμένες από **GitHub Pages**.
 
 Μόνο ένας broadcaster μπορεί να είναι on-air τη φορά.
 
-Το core pipeline (bridge → Icecast, chunked audio) έχει δοκιμαστεί end-to-end
-με πραγματικό webm/opus audio· βγαίνει καθαρό, valid stream στην άλλη άκρη.
+Γιατί δύο διαφορετικά hosting providers: το Icecast χρειάζεται μια
+απευθείας, ατέρμονη HTTP σύνδεση (το live audio feed) — το Render's free
+"web service" tier αποδείχτηκε ότι δεν την υποστηρίζει αξιόπιστα (η σύνδεση
+"κρεμούσε" χωρίς σφάλμα, το mount ποτέ δεν ενεργοποιούνταν). Το Fly.io έχει
+πιο άμεση πρόσβαση δικτύου και είναι σύνηθες για τέτοιου τύπου streaming.
+Το bridge δεν έχει αυτό το πρόβλημα (μιλάει μέσω WebSocket) οπότε έμεινε στο
+Render.
 
-## Deploy (χωρίς Docker στη δική σου συσκευή)
+## Deploy (χωρίς Docker/CLI στη δική σου συσκευή)
 
-Ο streaming server + bridge πρέπει να τρέχουν κάπου συνέχεια — δεν μπορούν να
-μείνουν "μέσα στο GitHub" (το GitHub Pages σερβίρει μόνο static αρχεία). Το
-repo έχει έτοιμο ένα **Render Blueprint** (`render.yaml`) που τα στήνει και τα
-δύο με λίγα κλικ, χωρίς να χρειαστεί να δώσεις κάπου API key.
+Όλο το deploy γίνεται μέσω **GitHub** — Actions για το Icecast (Fly.io),
+Blueprint για το bridge (Render), Pages για τις δύο σελίδες. Το μόνο που
+χρειάζεται να κάνεις εσύ είναι λογαριασμοί + μερικά secrets.
 
-### 1. Backend στο Render (Icecast + bridge)
+### 1. Icecast στο Fly.io (μέσω GitHub Actions)
 
-1. Δημιούργησε δωρεάν λογαριασμό στο https://render.com (π.χ. με GitHub login).
-2. Στο dashboard: **New → Blueprint** → διάλεξε αυτό το repo/branch.
-3. Το Render θα διαβάσει το `render.yaml` και θα προτείνει δύο services:
-   `pirateradio-icecast` και `pirateradio-bridge`. Πάτα **Apply**.
-4. Θα σου ζητηθεί να συμπληρώσεις μη αυτόματα (`sync: false`) κάποια env vars:
-   - Στο `pirateradio-icecast`: `ICECAST_SOURCE_PASSWORD`, `ICECAST_ADMIN_PASSWORD` —
-     βάλε δικούς σου τυχαίους κωδικούς.
-   - Στο `pirateradio-bridge`: `ICECAST_SOURCE_PASSWORD` (**ίδιο** με πάνω),
-     `BROADCAST_PASSWORD` (ο κωδικός που θα βάζεις εσύ στη σελίδα εκπομπής).
-5. Περίμενε να γίνει deploy το `pirateradio-icecast` και σημείωσε το public
-   URL του (π.χ. `pirateradio-icecast.onrender.com`, χωρίς `https://`).
-6. Πήγαινε στο `pirateradio-bridge` → **Environment** και συμπλήρωσε:
-   - `ICECAST_HOST` = το hostname από το βήμα 5 (π.χ. `pirateradio-icecast.onrender.com`)
+1. Δημιούργησε λογαριασμό στο https://fly.io (θέλει κάρτα για επαλήθευση
+   ταυτότητας, αλλά ο μικρός αυτός server μένει μέσα στο δωρεάν μηνιαίο
+   credit τους).
+2. Πήγαινε **Account → Access Tokens** και δημιούργησε ένα token.
+3. Στο GitHub repo: **Settings → Secrets and variables → Actions → New
+   repository secret** και πρόσθεσε:
+   - `FLY_API_TOKEN` = το token από το βήμα 2
+   - `ICECAST_SOURCE_PASSWORD` = δικός σου τυχαίος κωδικός
+   - `ICECAST_ADMIN_PASSWORD` = δικός σου τυχαίος κωδικός
+4. Το workflow `.github/workflows/deploy-icecast.yml` τρέχει αυτόματα σε κάθε
+   push στο `main` που αγγίζει το `icecast/` — δημιουργεί το Fly app, βάζει
+   τα secrets, κάνει deploy. Μπορείς και να το τρέξεις χειροκίνητα από το tab
+   **Actions** του repo (**Run workflow**).
+5. Αν το όνομα `pirateradio-icecast` είναι ήδη πιασμένο στο Fly (τα ονόματα
+   είναι global), άλλαξε το `app = "..."` στο `icecast/fly.toml` **και** το
+   `--app pirateradio-icecast` στο workflow **και** το hostname στα
+   `docs/index.html` / Render env vars παρακάτω, ώστε να ταιριάζουν όλα.
+6. Μετά από επιτυχές run, το Icecast είναι στο
+   `https://<app-name>.fly.dev`.
+
+### 2. Bridge στο Render (μέσω Blueprint)
+
+1. Δωρεάν λογαριασμός στο https://render.com (π.χ. με GitHub login).
+2. Dashboard: **New → Blueprint** → διάλεξε αυτό το repo/branch. Θα διαβάσει
+   το `render.yaml` και θα προτείνει το service `pirateradio-bridge`. Πάτα
+   **Apply**.
+3. Συμπλήρωσε τα env vars (`sync: false`, οπότε ζητούνται χειροκίνητα):
+   - `ICECAST_HOST` = `<app-name>.fly.dev` (χωρίς `https://`)
    - `ICECAST_PORT` = `443`
+   - `ICECAST_SOURCE_PASSWORD` = **ίδιο** με του Fly (βήμα 1)
+   - `BROADCAST_PASSWORD` = ο κωδικός που θα βάζεις εσύ στη σελίδα εκπομπής
+4. Μετά το deploy, σημείωσε το bridge URL (π.χ.
+   `https://pirateradio-bridge.onrender.com`).
 
-   (Το Render's free plan δεν λύνει αξιόπιστα εσωτερικά service-to-service
-   hostnames, οπότε το bridge μιλάει στο Icecast μέσω του δημόσιου URL του —
-   ίδιο μονοπάτι με τους ακροατές.)
+> Είχες ήδη δημιουργήσει ένα `pirateradio-icecast` service στο Render από
+> προηγούμενη προσπάθεια — δεν χρειάζεται πια, μπορείς να το σβήσεις από το
+> Render dashboard μόλις επιβεβαιωθεί ότι το Fly.io setup δουλεύει.
 
-> ⚠️ Το free plan του Render "κοιμίζει" τα services μετά από ανενεργία και
-> χρειάζονται ~30-60s για να ξυπνήσουν στο πρώτο request. Αν το ραδιόφωνο
-> μείνει αδρανές πολλή ώρα, το πρώτο "On Air" μετά μπορεί να αργήσει λίγο ή
-> να χρειαστεί δεύτερη προσπάθεια.
+### 3. Frontend στο GitHub Pages
 
-### 2. Frontend στο GitHub Pages
-
-1. Άνοιξε `docs/index.html` και άλλαξε το `EDIT_ME_ICECAST_URL` στο πραγματικό
-   Icecast URL (π.χ. `https://pirateradio-icecast.onrender.com`).
-2. Άνοιξε `docs/broadcast/index.html` και άλλαξε το `EDIT_ME_BRIDGE_URL` σε
-   `wss://` + το bridge URL (π.χ. `wss://pirateradio-bridge.onrender.com`).
+1. Επιβεβαίωσε ότι το `docs/index.html` δείχνει στο σωστό Fly hostname
+   (`src="https://<app-name>.fly.dev/radio.webm"`).
+2. Άνοιξε `docs/broadcast/index.html` και βάλε το bridge URL σε `wss://`
+   μορφή (π.χ. `wss://pirateradio-bridge.onrender.com`).
 3. Commit & push.
-4. Στο GitHub repo: **Settings → Pages → Source: Deploy from a branch →
-   Branch: main, folder: /docs**.
-5. Μετά από λίγο θα έχεις:
-   - https://vaglar.github.io/PirateRadio/ — το link για ακρόαση (στείλ' το).
-   - https://vaglar.github.io/PirateRadio/broadcast/ — το link για εκπομπή.
+4. GitHub repo: **Settings → Pages → Source: Deploy from a branch → Branch:
+   main, folder: /docs**.
+5. Links:
+   - https://vaglar.github.io/PirateRadio/ — ακρόαση (στείλ' το).
+   - https://vaglar.github.io/PirateRadio/broadcast/ — εκπομπή.
 
 ### Local test (πριν το deploy)
 
 ```
 docker compose up --build
 ```
-Ανοίγει Icecast στο `:8000` και bridge στο `:3001`. Άνοιξε
-`docs/index.html` και `docs/broadcast/index.html` τοπικά σε browser, με
+Ανοίγει Icecast στο `:8000` και bridge στο `:3001` — τοπικά, χωρίς Fly/Render.
+Άνοιξε `docs/index.html` και `docs/broadcast/index.html` σε browser, με
 bridge URL `ws://localhost:3001`.
 
 ## Γνωστοί περιορισμοί
@@ -85,10 +102,12 @@ bridge URL `ws://localhost:3001`.
   webm/opus εγγραφή μέσω `MediaRecorder` — η σελίδα εκπομπής θα δείξει σαφές
   μήνυμα λάθους σε iOS αντί να χαλάσει σιωπηλά. Ακρόαση από iPhone/iPad
   δουλεύει κανονικά.
-- Το deploy config (`render.yaml`, Dockerfiles) δεν έχει δοκιμαστεί με
-  πραγματικό Render deploy από αυτό το session (το sandbox μπλοκάρει έξοδο
-  προς render.com) — μόνο το local pipeline έχει επαληθευτεί με πραγματικό
-  audio. Αν κάτι σκάσει στο πρώτο deploy, στείλε το error και θα διορθωθεί.
+- Το Fly.io setup δεν έχει επαληθευτεί ζωντανά από αυτό το session (το
+  sandbox μπλοκάρει έξοδο προς fly.io) — βασίζεται σε τεκμηριωμένη
+  συμπεριφορά Fly.io, όχι σε πραγματικό test εδώ. Το local pipeline
+  (bridge → Icecast, raw audio) έχει επαληθευτεί end-to-end με πραγματικό
+  audio. Αν κάτι σκάσει στο πρώτο GitHub Actions run, στείλε τα logs του
+  workflow και θα διορθωθεί.
 
 ## Επόμενα βήματα (προαιρετικά)
 
