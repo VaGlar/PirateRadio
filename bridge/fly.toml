@@ -1,0 +1,20 @@
+app = "pirateradio-bridge"
+primary_region = "fra"
+
+[build]
+
+[env]
+  ICECAST_HOST = "pirateradio-icecast.internal"
+  ICECAST_PORT = "8000"
+  ICECAST_MOUNT = "/radio.mp3"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

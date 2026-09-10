@@ -1,0 +1,36 @@
+name: Deploy Bridge to Fly.io
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bridge/**'
+      - '.github/workflows/deploy-bridge.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency: deploy-bridge-fly
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Ensure Fly app exists
+        working-directory: bridge
+        run: flyctl apps create pirateradio-bridge --org personal || true
+
+      - name: Set bridge secrets
+        working-directory: bridge
+        run: |
+          flyctl secrets set \
+            ICECAST_SOURCE_PASSWORD="${{ secrets.ICECAST_SOURCE_PASSWORD }}" \
+            BROADCAST_PASSWORD="${{ secrets.BROADCAST_PASSWORD }}" \
+            --app pirateradio-bridge
+
+      - name: Deploy
+        working-directory: bridge
+        run: flyctl deploy --remote-only
