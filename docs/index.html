@@ -5,31 +5,128 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Pirate Radio</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 420px; margin: 80px auto; padding: 0 20px; text-align: center; }
-  h1 { font-size: 2rem; margin-bottom: 4px; }
-  p { color: #6b7280; }
-  audio { width: 100%; margin-top: 30px; }
-  input, textarea { width: 100%; padding: 10px; font-size: 1rem; margin: 8px 0; box-sizing: border-box; font-family: inherit; }
-  button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border: none; border-radius: 6px; background: #16a34a; color: white; width: 100%; }
-  #chatBox { margin-top: 36px; text-align: left; }
-  #chatBox h2 { font-size: 1rem; color: #374151; text-align: center; }
-  #chatStatus { font-size: 0.8rem; color: #6b7280; text-align: center; min-height: 1.2em; margin-top: 6px; }
+  :root {
+    --bg-0: #150e0a;
+    --bg-1: #1f150e;
+    --panel: #2a1d13;
+    --panel-border: #4a3520;
+    --gold: #e3a83b;
+    --gold-bright: #f4c360;
+    --cream: #f1e6d3;
+    --muted: #b8a98d;
+    --red: #d64545;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 56px 20px 60px;
+    text-align: center;
+    background:
+      radial-gradient(ellipse at top, rgba(227, 168, 59, 0.08), transparent 60%),
+      linear-gradient(180deg, var(--bg-0), var(--bg-1));
+    color: var(--cream);
+    min-height: 100vh;
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: system-ui, sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    padding: 5px 14px;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: 2.1rem;
+    margin: 0 0 6px;
+    letter-spacing: 0.02em;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  p.tagline { color: var(--muted); font-family: system-ui, sans-serif; font-size: 0.92rem; margin: 0 0 32px; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  audio { width: 100%; margin: 0; accent-color: var(--gold); filter: invert(0); }
+
+  input, textarea {
+    width: 100%;
+    padding: 11px 12px;
+    font-size: 0.95rem;
+    margin: 8px 0;
+    box-sizing: border-box;
+    font-family: system-ui, sans-serif;
+    background: var(--bg-0);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    color: var(--cream);
+  }
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+  input:focus, textarea:focus { outline: none; border-color: var(--gold); }
+
+  button {
+    padding: 12px 24px;
+    font-size: 0.95rem;
+    font-family: system-ui, sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    color: #24160a;
+    width: 100%;
+    letter-spacing: 0.02em;
+  }
+  button:hover { filter: brightness(1.05); }
+  button:active { filter: brightness(0.95); }
+
+  #chatBox { margin-top: 28px; text-align: left; }
+  #chatBox h2 {
+    font-size: 0.95rem;
+    font-family: system-ui, sans-serif;
+    font-weight: 600;
+    color: var(--gold);
+    text-align: center;
+    margin: 0 0 4px;
+  }
+  #chatStatus { font-family: system-ui, sans-serif; font-size: 0.8rem; color: var(--muted); text-align: center; min-height: 1.2em; margin-top: 6px; }
 </style>
 </head>
 <body>
-  <h1>🏴‍☠️ Pirate Radio</h1>
-  <p>Πατήστε play για να ακούσετε την εκπομπή.</p>
+  <div class="badge">🏴‍☠️ Live Broadcast</div>
+  <h1>Pirate Radio</h1>
+  <p class="tagline">Πάτησε play για να ακούσεις την εκπομπή.</p>
 
-  <audio controls preload="none" src="https://pirateradio-icecast.fly.dev/radio.mp3">
-    Ο browser σου δεν υποστηρίζει audio.
-  </audio>
+  <div class="panel">
+    <audio controls preload="none" src="https://pirateradio-icecast.fly.dev/radio.mp3">
+      Ο browser σου δεν υποστηρίζει audio.
+    </audio>
 
-  <div id="chatBox">
-    <h2>📨 Στείλε μήνυμα στην εκπομπή</h2>
-    <input id="chatName" type="text" placeholder="Το όνομά σου (προαιρετικό)" maxlength="40" />
-    <textarea id="chatMessage" rows="2" placeholder="Μήνυμα..." maxlength="300"></textarea>
-    <button id="chatSend" type="button">Αποστολή</button>
-    <div id="chatStatus"></div>
+    <div id="chatBox">
+      <h2>📨 Στείλε μήνυμα στην εκπομπή</h2>
+      <input id="chatName" type="text" placeholder="Το όνομά σου (προαιρετικό)" maxlength="40" />
+      <textarea id="chatMessage" rows="2" placeholder="Μήνυμα..." maxlength="300"></textarea>
+      <button id="chatSend" type="button">Αποστολή</button>
+      <div id="chatStatus"></div>
+    </div>
   </div>
 
   <script src="app.js"></script>

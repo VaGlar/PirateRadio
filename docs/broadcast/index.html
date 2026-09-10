@@ -5,55 +5,122 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Pirate Radio — On Air</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 420px; margin: 60px auto; padding: 0 20px; text-align: center; transition: background 150ms; }
-  body.muted-bg { background: #fef2f2; }
-  h1 { font-size: 1.4rem; }
-  input[type="password"], input[type="text"] { width: 100%; padding: 10px; font-size: 1rem; margin: 12px 0; box-sizing: border-box; }
-  button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border: none; border-radius: 6px; }
-  #startBtn { background: #16a34a; color: white; width: 100%; }
-  #stopBtn { background: #dc2626; color: white; width: 100%; margin-top: 10px; }
-  #status { margin-top: 20px; font-weight: bold; }
-  .live { color: #dc2626; }
-  .off { color: #6b7280; }
-  #error { color: #dc2626; margin-top: 10px; font-size: 0.9rem; }
-  select { width: 100%; padding: 10px; font-size: 1rem; margin: 6px 0 12px; box-sizing: border-box; }
-  label { display: block; text-align: left; font-size: 0.85rem; color: #6b7280; margin-top: 10px; }
-  #testBtn { background: #2563eb; color: white; width: 100%; margin-bottom: 10px; }
-  #meterWrap { background: #e5e7eb; border-radius: 6px; height: 14px; overflow: hidden; margin: 8px 0 4px; }
-  #meterBar { background: #16a34a; height: 100%; width: 0%; transition: width 60ms linear; }
-  #meterHint { font-size: 0.8rem; color: #6b7280; }
+  :root {
+    --bg-0: #150e0a;
+    --bg-1: #1f150e;
+    --panel: #2a1d13;
+    --panel-2: #241a10;
+    --panel-border: #4a3520;
+    --gold: #e3a83b;
+    --gold-bright: #f4c360;
+    --cream: #f1e6d3;
+    --muted: #b8a98d;
+    --red: #d64545;
+    --green: #4caf6f;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: system-ui, sans-serif;
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 44px 20px 60px;
+    text-align: center;
+    background:
+      radial-gradient(ellipse at top, rgba(227, 168, 59, 0.08), transparent 60%),
+      linear-gradient(180deg, var(--bg-0), var(--bg-1));
+    color: var(--cream);
+    min-height: 100vh;
+    transition: background 200ms;
+  }
+  body.muted-bg {
+    background:
+      radial-gradient(ellipse at top, rgba(214, 69, 69, 0.22), transparent 65%),
+      linear-gradient(180deg, var(--bg-0), var(--bg-1));
+  }
+
+  h1 {
+    font-family: 'Georgia', serif;
+    font-size: 1.5rem;
+    margin: 0 0 26px;
+    letter-spacing: 0.02em;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    text-align: left;
+  }
+
+  input[type="password"], input[type="text"] {
+    width: 100%; padding: 11px 12px; font-size: 0.95rem; margin: 8px 0; box-sizing: border-box;
+    background: var(--bg-0); border: 1px solid var(--panel-border); border-radius: 8px; color: var(--cream);
+  }
+  input::placeholder { color: var(--muted); }
+  input:focus { outline: none; border-color: var(--gold); }
+
+  button {
+    padding: 12px 24px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    border: none; border-radius: 8px; letter-spacing: 0.02em;
+  }
+  #startBtn { background: linear-gradient(180deg, var(--gold-bright), var(--gold)); color: #24160a; width: 100%; }
+  #stopBtn { background: var(--red); color: white; width: 100%; margin-top: 10px; }
+  #status { margin-top: 18px; font-weight: bold; text-align: center; }
+  .live { color: var(--red); }
+  .off { color: var(--muted); }
+  #error { color: var(--red); margin-top: 10px; font-size: 0.9rem; text-align: center; }
+
+  select {
+    width: 100%; padding: 10px; font-size: 0.95rem; margin: 6px 0 12px; box-sizing: border-box;
+    background: var(--bg-0); border: 1px solid var(--panel-border); border-radius: 8px; color: var(--cream);
+  }
+  label { display: block; text-align: left; font-size: 0.82rem; color: var(--muted); margin-top: 10px; }
+  #testBtn { background: var(--panel-2); border: 1px solid var(--panel-border); color: var(--gold); width: 100%; margin-bottom: 10px; }
+
+  #meterWrap { background: var(--bg-0); border: 1px solid var(--panel-border); border-radius: 6px; height: 14px; overflow: hidden; margin: 8px 0 4px; }
+  #meterBar { background: linear-gradient(90deg, var(--green), var(--gold-bright)); height: 100%; width: 0%; transition: width 60ms linear; }
+  #meterHint { font-size: 0.78rem; color: var(--muted); }
 
   /* Mute button — deliberately loud: this is the one thing that must be
      impossible to miss while live. */
-  #muteBtn { display: none; width: 100%; padding: 22px; font-size: 1.3rem; font-weight: bold; border-radius: 10px; margin-top: 16px; background: #16a34a; color: white; }
-  #muteBtn.muted { background: #dc2626; animation: mutePulse 1s infinite; box-shadow: 0 0 0 4px #fecaca; }
-  @keyframes mutePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
-  #muteHint { display: none; font-size: 0.78rem; color: #6b7280; margin: 6px 0 4px; }
+  #muteBtn { display: none; width: 100%; padding: 22px; font-size: 1.3rem; font-weight: bold; border-radius: 12px; margin-bottom: 16px; background: linear-gradient(180deg, #5fcf87, var(--green)); color: #06210f; }
+  #muteBtn.muted { background: linear-gradient(180deg, #ef6b6b, var(--red)); color: white; animation: mutePulse 1s infinite; box-shadow: 0 0 0 4px rgba(214, 69, 69, 0.35); }
+  @keyframes mutePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+  #muteHint { display: none; font-size: 0.78rem; color: var(--muted); margin: -8px 0 14px; text-align: center; }
 
-  #liveControls { display: none; text-align: left; margin-top: 18px; padding-top: 14px; border-top: 1px solid #e5e7eb; }
-  .checkRow { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; margin: 6px 0; }
-  .checkRow input { width: auto; margin: 0; }
-  #mixSliderWrap { display: none; margin-top: 8px; }
-  #mixSliderWrap .labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: #9ca3af; }
-  input[type="range"] { width: 100%; margin: 2px 0 6px; }
+  #liveControls { display: none; }
+  .checkRow { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; margin: 8px 0; color: var(--cream); }
+  .checkRow input { width: auto; margin: 0; accent-color: var(--gold); }
+  #mixSliderWrap { display: none; margin-top: 10px; }
+  #mixSliderWrap .labels { display: flex; justify-content: space-between; font-size: 0.74rem; color: var(--muted); }
+  input[type="range"] { width: 100%; margin: 2px 0 6px; accent-color: var(--gold); }
 
-  #liveStats { display: none; margin-top: 18px; padding: 14px; background: #f3f4f6; border-radius: 8px; }
-  #liveStats .row { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 3px 0; }
-  #liveStats .row b { font-variant-numeric: tabular-nums; }
-  #inbox { display: none; margin-top: 18px; text-align: left; }
-  #inbox h3 { font-size: 0.95rem; color: #374151; margin-bottom: 6px; }
+  #liveStats { display: none; }
+  #liveStats .row { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 4px 0; }
+  #liveStats .row b { font-variant-numeric: tabular-nums; color: var(--gold-bright); }
+  #inbox { display: none; }
+  #inbox h3 { font-size: 0.95rem; color: var(--gold); margin: 0 0 10px; }
   #inboxList { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-  #inboxList .msg { background: #f3f4f6; border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; }
-  #inboxList .msg .name { font-weight: bold; color: #2563eb; }
-  #inboxList .msg .time { float: right; color: #9ca3af; font-size: 0.75rem; }
-  #inboxEmpty { color: #9ca3af; font-size: 0.85rem; }
+  #inboxList .msg { background: var(--panel-2); border: 1px solid var(--panel-border); border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; }
+  #inboxList .msg .name { font-weight: bold; color: var(--gold-bright); }
+  #inboxList .msg .time { float: right; color: var(--muted); font-size: 0.75rem; }
+  #inboxEmpty { color: var(--muted); font-size: 0.85rem; }
 </style>
 </head>
 <body>
-  <h1>🏴‍☠️ Pirate Radio — Broadcaster</h1>
+  <h1 style="text-align:center">🏴‍☠️ Pirate Radio — Broadcaster</h1>
 
   <!-- Before On Air -->
-  <div id="setup">
+  <div id="setup" class="panel">
     <input id="password" type="password" placeholder="Κωδικός εκπομπής" />
 
     <label for="micSelect">Μικρόφωνο</label>
@@ -70,7 +137,7 @@
   <button id="muteBtn" type="button">🎤 LIVE (πάτα για Mute)</button>
   <div id="muteHint">Πλήκτρο <b>Space</b> κάνει το ίδιο (όσο δεν πληκτρολογείς σε πεδίο).</div>
 
-  <div id="liveControls">
+  <div id="liveControls" class="panel">
     <div class="checkRow">
       <input id="sysAudioCheck" type="checkbox" />
       <label for="sysAudioCheck" style="margin:0">🎵 Spotify</label>
@@ -90,13 +157,13 @@
   <div id="status" class="off">Off air</div>
   <div id="error"></div>
 
-  <div id="liveStats">
+  <div id="liveStats" class="panel">
     <div class="row"><span>⏱️ Διάρκεια</span><b id="elapsed">00:00</b></div>
     <div class="row"><span>🎧 Ακροατές τώρα</span><b id="listenerCount">—</b></div>
     <div class="row"><span>📈 Peak ακροατές</span><b id="peakCount">—</b></div>
   </div>
 
-  <div id="inbox">
+  <div id="inbox" class="panel">
     <h3>📨 Μηνύματα ακροατών</h3>
     <div id="inboxList"><div id="inboxEmpty">Κανένα μήνυμα ακόμα.</div></div>
   </div>
