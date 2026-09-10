@@ -10,6 +10,8 @@ const setup2El = document.getElementById('setup2');
 const statusEl = document.getElementById('status');
 const errorEl = document.getElementById('error');
 const monitorToggle = document.getElementById('monitorToggle');
+const muteBtn = document.getElementById('muteBtn');
+const muteHintEl = document.getElementById('muteHint');
 const liveStatsEl = document.getElementById('liveStats');
 const elapsedEl = document.getElementById('elapsed');
 const listenerCountEl = document.getElementById('listenerCount');
@@ -26,6 +28,30 @@ let onAirAt = 0;
 let elapsedTimer = null;
 let statsTimer = null;
 let peakListeners = 0;
+let isMuted = false;
+
+// Mutes whatever's currently selected as input (real mic, Stereo Mix,
+// Voicemeeter Output, ...) by disabling the track rather than stopping it —
+// MediaRecorder keeps running and sends silence instead, so the connection
+// to Icecast never drops. If you're mixing mic+music together upstream
+// (e.g. in Voicemeeter) this mutes that whole combined signal, not just
+// your voice — use Voicemeeter's own per-channel mute for that instead.
+function setMuted(muted) {
+  isMuted = muted;
+  if (stream) stream.getAudioTracks().forEach((t) => (t.enabled = !muted));
+  muteBtn.textContent = muted ? '🔇 Muted (πάτα για Live)' : '🎤 Live (πάτα για Mute)';
+  muteBtn.classList.toggle('muted', muted);
+}
+muteBtn.addEventListener('click', () => setMuted(!isMuted));
+
+document.addEventListener('keydown', (e) => {
+  if (e.code !== 'Space') return;
+  const tag = (e.target?.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'select' || tag === 'textarea') return; // don't hijack typing
+  if (!ws || ws.readyState !== WebSocket.OPEN) return; // only while actually on air
+  e.preventDefault();
+  setMuted(!isMuted);
+});
 
 async function listMicrophones() {
   try {
@@ -203,6 +229,9 @@ function goLive() {
   setupEl.style.display = 'none';
   setup2El.style.display = 'none';
   stopBtn.style.display = 'inline-block';
+  muteBtn.style.display = 'block';
+  muteHintEl.style.display = 'block';
+  setMuted(false);
   statusEl.textContent = '🔴 ON AIR';
   statusEl.className = 'live';
 
@@ -247,6 +276,9 @@ function cleanup() {
   setupEl.style.display = 'block';
   setup2El.style.display = 'block';
   stopBtn.style.display = 'none';
+  muteBtn.style.display = 'none';
+  muteHintEl.style.display = 'none';
+  isMuted = false;
   liveStatsEl.style.display = 'none';
   statusEl.textContent = 'Off air';
   statusEl.className = 'off';

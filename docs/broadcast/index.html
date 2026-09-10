@@ -11,6 +11,9 @@
   button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border: none; border-radius: 6px; }
   #startBtn { background: #16a34a; color: white; }
   #stopBtn { background: #dc2626; color: white; width: 100%; }
+  #muteBtn { background: #6b7280; color: white; width: 100%; margin-bottom: 10px; }
+  #muteBtn.muted { background: #b45309; }
+  #muteHint { font-size: 0.78rem; color: #6b7280; margin: -6px 0 12px; }
   #status { margin-top: 20px; font-weight: bold; }
   .live { color: #dc2626; }
   .off { color: #6b7280; }
@@ -55,6 +58,9 @@
   <div id="setup2">
     <button id="startBtn">🎙️ On Air</button>
   </div>
+
+  <button id="muteBtn" type="button" style="display:none">🎤 Live (πάτα για Mute)</button>
+  <div id="muteHint" style="display:none">Πλήκτρο <b>Space</b> κάνει το ίδιο — δουλεύει όσο δεν πληκτρολογείς σε πεδίο.</div>
 
   <button id="stopBtn" style="display:none">⏹ Off Air</button>
 
