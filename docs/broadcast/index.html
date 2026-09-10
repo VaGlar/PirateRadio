@@ -65,13 +65,13 @@
   #meterBar { background: var(--gold); height: 100%; width: 0%; transition: width 60ms linear; }
   #meterHint { font-size: 0.78rem; color: var(--muted); }
 
-  /* Mute button doubles as the neon "ON AIR" sign — lit and glowing while
-     live, unlit and pulsing while muted. Deliberately loud: this is the
-     one thing that must be impossible to miss while live. */
+  /* Mute button doubles as the exact same neon "ON AIR" sign as the
+     listener page: lit while live, unlit while muted. Same markup, same
+     rules, just wrapped in a <button> instead of a <div>. */
   #muteBtn {
     display: none;
     width: 100%;
-    padding: 22px 10px;
+    padding: 26px 10px;
     border-radius: 12px;
     margin-bottom: 16px;
     cursor: pointer;
@@ -82,25 +82,23 @@
   }
   #muteBtn span {
     font-family: 'Georgia', serif;
-    font-size: 1.6rem;
+    font-size: 2rem;
     font-weight: bold;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
+    color: transparent;
+    -webkit-text-stroke: 1.5px #5a5048;
+    transition: color 250ms, text-shadow 250ms, -webkit-text-stroke-color 250ms;
+  }
+  #muteBtn.lit span {
     color: #ff5a4d;
+    -webkit-text-stroke-color: #ffcf8a;
     text-shadow:
       0 0 6px #ff5a4d,
       0 0 16px #ff5a4d,
       0 0 6px #ffcf8a,
       0 0 34px #d9a441,
       0 0 55px #d9a441;
-    transition: color 250ms, text-shadow 250ms, -webkit-text-stroke-color 250ms;
   }
-  #muteBtn.muted span {
-    color: transparent;
-    -webkit-text-stroke: 1.5px var(--mute-grey);
-    text-shadow: none;
-    animation: mutePulse 0.9s infinite;
-  }
-  @keyframes mutePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
   #muteHint { display: none; font-size: 0.78rem; color: var(--muted); margin: -8px 0 14px; text-align: center; }
 
   #liveControls { display: none; }
@@ -140,7 +138,7 @@
   </div>
 
   <!-- While On Air -->
-  <button id="muteBtn" type="button"><span id="muteBtnText">ON AIR</span></button>
+  <button id="muteBtn" type="button"><span>ON AIR</span></button>
   <div id="muteHint">Πλήκτρο <b>Space</b> κάνει το ίδιο (όσο δεν πληκτρολογείς σε πεδίο).</div>
 
   <div id="liveControls" class="panel">

@@ -8,7 +8,6 @@ const testBtn = document.getElementById('testBtn');
 const micSelect = document.getElementById('micSelect');
 const meterBar = document.getElementById('meterBar');
 const setupEl = document.getElementById('setup');
-const muteBtnText = document.getElementById('muteBtnText');
 const statusEl = document.getElementById('status');
 const errorEl = document.getElementById('error');
 const monitorToggle = document.getElementById('monitorToggle');
@@ -183,8 +182,7 @@ sysAudioCheck.addEventListener('change', async () => {
 function setMuted(muted) {
   isMuted = muted;
   if (stream) stream.getAudioTracks().forEach((t) => (t.enabled = !muted));
-  muteBtnText.textContent = muted ? 'MUTED' : 'ON AIR';
-  muteBtn.classList.toggle('muted', muted);
+  muteBtn.classList.toggle('lit', !muted);
   document.body.classList.toggle('muted-bg', muted);
 }
 muteBtn.addEventListener('click', () => setMuted(!isMuted));
