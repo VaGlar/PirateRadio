@@ -89,6 +89,7 @@ let elapsedTimer = null;
 let statsTimer = null;
 let peakListeners = 0;
 let isMuted = false;
+let recordedChunks = []; // local-only copy of the broadcast audio, offered as a download when the show ends — no server storage, no cost
 
 // One persistent Web Audio graph for the whole page session: mic and
 // (optionally) system audio each go through their own GainNode into a
@@ -707,14 +708,43 @@ function goLive() {
   // again into MP3 downstream and the result sounds noisy. Force a bitrate
   // high enough for clean music before that happens. Records the *mixed*
   // stream (mic [+ system audio if attached]), not the raw mic.
+  recordedChunks = [];
   mediaRecorder = new MediaRecorder(mixDest.stream, { mimeType: MIME_TYPE, audioBitsPerSecond: 192000 });
   mediaRecorder.ondataavailable = async (event) => {
-    if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+    if (event.data.size === 0) return;
+    recordedChunks.push(event.data);
+    if (ws.readyState === WebSocket.OPEN) {
       const buffer = await event.data.arrayBuffer();
       ws.send(buffer);
     }
   };
+  // Wait for the recorder's own 'stop' event rather than prompting right
+  // after calling .stop() in cleanup() — 'stop' only fires once the final
+  // chunk's 'dataavailable' has actually been processed, so this is what
+  // makes sure that trailing fragment isn't missing from the download.
+  mediaRecorder.addEventListener('stop', offerRecordingDownload);
   mediaRecorder.start(250); // send a chunk every 250ms
+}
+
+// Recording lives only in this tab's memory, never touches the server —
+// zero storage cost, but it's gone if you close the tab without saving.
+function offerRecordingDownload() {
+  if (recordedChunks.length === 0) return;
+  const chunks = recordedChunks;
+  recordedChunks = [];
+  const wantsSave = confirm('Θέλεις να αποθηκεύσεις την ηχογράφηση της εκπομπής στον υπολογιστή σου;');
+  if (!wantsSave) return;
+
+  const blob = new Blob(chunks, { type: 'audio/webm' });
+  const url = URL.createObjectURL(blob);
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `pirate-radio-${stamp}.webm`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 function cleanup() {
