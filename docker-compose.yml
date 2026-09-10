@@ -1,0 +1,28 @@
+services:
+  icecast:
+    build: ./icecast
+    container_name: pirateradio-icecast
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - ICECAST_SOURCE_PASSWORD=${ICECAST_SOURCE_PASSWORD:-changeme-source}
+      - ICECAST_ADMIN_PASSWORD=${ICECAST_ADMIN_PASSWORD:-changeme-admin}
+      - ICECAST_HOSTNAME=localhost
+
+  bridge:
+    build: ./bridge
+    container_name: pirateradio-bridge
+    restart: unless-stopped
+    depends_on:
+      - icecast
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - ICECAST_HOST=icecast
+      - ICECAST_PORT=8000
+      - ICECAST_MOUNT=/radio.webm
+      - ICECAST_SOURCE_PASSWORD=${ICECAST_SOURCE_PASSWORD:-changeme-source}
+      - BROADCAST_PASSWORD=${BROADCAST_PASSWORD:-changeme-broadcast}
