@@ -61,9 +61,10 @@ function ensureAudioGraph() {
   analyser = audioCtx.createAnalyser();
   analyser.fftSize = 512;
 
-  // Self-monitor: only the mic feeds this, deliberately. Looping system
-  // audio back to the speakers would just double music you're already
-  // hearing natively from its own source.
+  // Self-monitor destination. Mic always feeds it; system audio (if
+  // attached) does too — see attachSysAudio — so once you've muted the
+  // original source (e.g. muted the Chrome tab) this is the only place
+  // you hear it, and it's the exact mixed signal being broadcast.
   monitorGain = audioCtx.createGain();
   monitorGain.gain.value = monitorToggle.checked ? 1 : 0;
   monitorGain.connect(audioCtx.destination);
@@ -114,6 +115,12 @@ async function attachSysAudio() {
   sysSourceNode.connect(sysGainNode);
   sysGainNode.connect(mixDest);
   sysGainNode.connect(analyser);
+  // Also feed the self-monitor now — once you've muted the source tab
+  // itself (Chrome keeps capturing a muted tab's audio, it just stops
+  // playing it locally), this is the only way you hear the music at all,
+  // and it's the same mixed signal being broadcast rather than a second
+  // copy of the original.
+  sysGainNode.connect(monitorGain);
 
   audioTracks[0].addEventListener('ended', detachSysAudio); // browser's own "Stop sharing" bar
 }
