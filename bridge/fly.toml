@@ -4,8 +4,14 @@ primary_region = "fra"
 [build]
 
 [env]
-  ICECAST_HOST = "pirateradio-icecast.internal"
-  ICECAST_PORT = "8000"
+  # Fly's internal 6PN DNS (pirateradio-icecast.internal) refused the
+  # connection even with a single, running Icecast machine — untested and
+  # apparently not working as expected. Falling back to the public HTTPS
+  # path, which already proved it works end-to-end (mount registered, real
+  # audio flowed) when the bridge was still on Render — the only variable
+  # changing now is that the connection originates from Fly instead.
+  ICECAST_HOST = "pirateradio-icecast.fly.dev"
+  ICECAST_PORT = "443"
   ICECAST_MOUNT = "/radio.mp3"
 
 [http_service]
