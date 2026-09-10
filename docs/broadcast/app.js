@@ -230,12 +230,27 @@ output2Select.addEventListener('change', () => applyOutputDevice(monitorAudio2, 
 // move together against the music. Mic stays at full volume regardless of
 // the slider until music is actually attached — there's nothing to fade
 // against yet.
+// Ramp instead of snapping the gain instantly — this matters most now that
+// clicking anywhere on the slider can jump it a long way in one go (see
+// below): without a ramp that would be an abrupt, audible cut/pop in the
+// mix. cancelScheduledValues + setValueAtTime(current) first, so repeated
+// calls during a drag each start cleanly from wherever the ramp actually is
+// right now instead of stacking on top of each other.
+const MIX_RAMP_SEC = 0.2;
+function rampGain(node, target) {
+  if (!node || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  node.gain.cancelScheduledValues(now);
+  node.gain.setValueAtTime(node.gain.value, now);
+  node.gain.linearRampToValueAtTime(target, now + MIX_RAMP_SEC);
+}
+
 function updateMixGains() {
   const pos = Number(mixSliderEl.value) / 100;
   const micLevel = sysGainNode ? Math.cos((pos * Math.PI) / 2) : 1;
-  if (micGainNode) micGainNode.gain.value = micLevel;
-  if (mic2GainNode) mic2GainNode.gain.value = micLevel;
-  if (sysGainNode) sysGainNode.gain.value = Math.sin((pos * Math.PI) / 2);
+  rampGain(micGainNode, micLevel);
+  rampGain(mic2GainNode, micLevel);
+  rampGain(sysGainNode, Math.sin((pos * Math.PI) / 2));
 }
 mixSliderEl.addEventListener('input', updateMixGains);
 
