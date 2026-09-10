@@ -10,6 +10,7 @@ const {
   ICECAST_MOUNT = '/radio.webm',
   BROADCAST_PASSWORD,
   BRIDGE_PORT = '3001',
+  PORT, // set automatically by Render (and most PaaS) for the public web service port
 } = process.env;
 
 if (!ICECAST_SOURCE_PASSWORD || !BROADCAST_PASSWORD) {
@@ -17,8 +18,9 @@ if (!ICECAST_SOURCE_PASSWORD || !BROADCAST_PASSWORD) {
   process.exit(1);
 }
 
-const wss = new WebSocketServer({ port: Number(BRIDGE_PORT) });
-console.log(`Bridge listening on ws://0.0.0.0:${BRIDGE_PORT}`);
+const listenPort = Number(PORT || BRIDGE_PORT);
+const wss = new WebSocketServer({ port: listenPort });
+console.log(`Bridge listening on ws://0.0.0.0:${listenPort}`);
 
 let activeBroadcaster = null; // only one on-air source at a time
 

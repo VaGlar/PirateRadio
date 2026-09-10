@@ -14,18 +14,16 @@
     </limits>
 
     <authentication>
-        <!-- CHANGE THESE before going live -->
-        <source-password>changeme-source</source-password>
-        <relay-password>changeme-relay</relay-password>
+        <source-password>__ICECAST_SOURCE_PASSWORD__</source-password>
+        <relay-password>__ICECAST_SOURCE_PASSWORD__</relay-password>
         <admin-user>admin</admin-user>
-        <admin-password>changeme-admin</admin-password>
+        <admin-password>__ICECAST_ADMIN_PASSWORD__</admin-password>
     </authentication>
 
-    <!-- set to your public hostname/IP once deployed -->
-    <hostname>localhost</hostname>
+    <hostname>__ICECAST_HOSTNAME__</hostname>
 
     <listen-socket>
-        <port>8000</port>
+        <port>__PORT__</port>
     </listen-socket>
 
     <http-headers>

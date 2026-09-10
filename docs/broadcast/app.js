@@ -1,3 +1,5 @@
+const MIME_TYPE = 'audio/webm;codecs=opus';
+
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const setupEl = document.getElementById('setup');
@@ -15,6 +17,11 @@ startBtn.addEventListener('click', async () => {
 
   if (!password || !bridgeUrl) {
     errorEl.textContent = 'Συμπλήρωσε κωδικό και διεύθυνση bridge.';
+    return;
+  }
+
+  if (!window.MediaRecorder || !MediaRecorder.isTypeSupported(MIME_TYPE)) {
+    errorEl.textContent = 'Αυτός ο browser δεν υποστηρίζει webm/opus εγγραφή (π.χ. Safari σε iPhone/iPad). Δοκίμασε Chrome ή Firefox σε laptop/Android.';
     return;
   }
 
@@ -57,7 +64,7 @@ function goLive() {
   statusEl.textContent = '🔴 ON AIR';
   statusEl.className = 'live';
 
-  mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+  mediaRecorder = new MediaRecorder(stream, { mimeType: MIME_TYPE });
   mediaRecorder.ondataavailable = async (event) => {
     if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
       const buffer = await event.data.arrayBuffer();
