@@ -23,6 +23,6 @@ services:
       - PORT=3001
       - ICECAST_HOST=icecast
       - ICECAST_PORT=8000
-      - ICECAST_MOUNT=/radio.webm
+      - ICECAST_MOUNT=/radio.mp3
       - ICECAST_SOURCE_PASSWORD=${ICECAST_SOURCE_PASSWORD:-changeme-source}
       - BROADCAST_PASSWORD=${BROADCAST_PASSWORD:-changeme-broadcast}

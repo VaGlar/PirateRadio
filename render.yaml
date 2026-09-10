@@ -17,6 +17,6 @@ services:
       - key: ICECAST_SOURCE_PASSWORD
         sync: false
       - key: ICECAST_MOUNT
-        value: /radio.webm
+        value: /radio.mp3
       - key: BROADCAST_PASSWORD
         sync: false

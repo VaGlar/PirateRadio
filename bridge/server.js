@@ -1,14 +1,13 @@
 require('dotenv').config();
 
-const http = require('http');
-const https = require('https');
+const { spawn } = require('child_process');
 const { WebSocketServer } = require('ws');
 
 const {
   ICECAST_SOURCE_PASSWORD,
   ICECAST_HOST = 'localhost',
   ICECAST_PORT = '8000',
-  ICECAST_MOUNT = '/radio.webm',
+  ICECAST_MOUNT = '/radio.mp3',
   BROADCAST_PASSWORD,
   BRIDGE_PORT = '3001',
   PORT, // set automatically by Render (and most PaaS) for the public web service port
@@ -25,65 +24,53 @@ console.log(`Bridge listening on ws://0.0.0.0:${listenPort}`);
 
 let activeBroadcaster = null; // only one on-air source at a time
 
-function openIcecastRequest(ws) {
-  const port = Number(ICECAST_PORT);
-  // Render's free plan doesn't reliably resolve internal service-to-service
-  // hostnames, so we talk to Icecast over its public URL — same as listeners
-  // do. That means HTTPS on 443, plain HTTP everywhere else (e.g. localhost).
-  const transport = port === 443 ? https : http;
-  const req = transport.request({
-    host: ICECAST_HOST,
-    port,
-    path: ICECAST_MOUNT,
-    method: 'PUT',
-    headers: {
-      Authorization: 'Basic ' + Buffer.from(`source:${ICECAST_SOURCE_PASSWORD}`).toString('base64'),
-      'Content-Type': 'audio/webm',
-      'Ice-Public': '1',
-      'Ice-Name': 'Pirate Radio',
-    },
+// Browsers don't reliably play a live, indefinite-duration webm/opus stream
+// through a plain <audio> tag — MP3 over Icecast is the combination every
+// real internet radio setup relies on for that reason. ffmpeg both
+// transcodes MediaRecorder's webm/opus output to MP3 and speaks Icecast's
+// source protocol itself (far more robust than a hand-rolled HTTP client).
+function spawnFfmpeg(ws) {
+  const tls = Number(ICECAST_PORT) === 443;
+  const icecastUrl = `icecast://source@${ICECAST_HOST}:${ICECAST_PORT}${ICECAST_MOUNT}`;
+
+  const ffmpeg = spawn('ffmpeg', [
+    '-loglevel', 'warning',
+    '-f', 'webm',
+    '-i', 'pipe:0',
+    '-vn',
+    '-c:a', 'libmp3lame',
+    '-b:a', '128k',
+    '-content_type', 'audio/mpeg',
+    '-ice_name', 'Pirate Radio',
+    '-ice_public', '1',
+    '-password', ICECAST_SOURCE_PASSWORD,
+    '-tls', tls ? '1' : '0',
+    '-f', 'mp3',
+    icecastUrl,
+  ]);
+
+  ffmpeg.stderr.on('data', (chunk) => {
+    console.log('ffmpeg:', chunk.toString().trim());
   });
-  // Icecast's source protocol expects a raw byte stream when we talk to it
-  // directly (no Content-Length, no chunk framing) — without this Node
-  // wraps every write() in HTTP chunk-size markers that Icecast doesn't
-  // decode, corrupting the audio. This only applies to a direct connection
-  // (local docker-compose); going through Render's public HTTPS edge, the
-  // proxy in front of Icecast expects standard, well-formed HTTP and
-  // handles unchunking itself before forwarding upstream.
-  if (transport === http) {
-    req.useChunkedEncodingByDefault = false;
-  }
-  req.on('socket', (socket) => {
-    console.log('Icecast request: socket assigned');
-    socket.on('connect', () => console.log('Icecast request: TCP connected'));
-    socket.on('secureConnect', () => console.log('Icecast request: TLS handshake complete'));
+
+  ffmpeg.on('error', (err) => {
+    console.error('Failed to start ffmpeg:', err.message);
+    ws.send(JSON.stringify({ type: 'error', message: 'Failed to start ffmpeg: ' + err.message }));
   });
-  // If Icecast (or a proxy in front of it) never responds at all, don't
-  // hang forever — surface that explicitly instead of looking identical to
-  // a working stream.
-  req.setTimeout(15000, () => {
-    console.error('Icecast request timed out waiting for a response (15s)');
-    ws.send(JSON.stringify({ type: 'error', message: 'Icecast never responded (timeout) — likely a proxy/network issue' }));
-    req.destroy();
-  });
-  req.on('error', (err) => {
-    console.error('Icecast connection error:', err.message);
-    ws.send(JSON.stringify({ type: 'error', message: 'Icecast connection failed: ' + err.message }));
-  });
-  req.on('response', (res) => {
-    console.log(`Icecast responded with status ${res.statusCode}`);
-    res.on('data', (chunk) => console.log(`Icecast response body: ${chunk.toString().slice(0, 200)}`));
-    if (res.statusCode >= 400) {
-      console.error(`Icecast rejected the source connection: ${res.statusCode}`);
-      ws.send(JSON.stringify({ type: 'error', message: `Icecast rejected the connection (${res.statusCode})` }));
+
+  ffmpeg.on('exit', (code, signal) => {
+    console.log(`ffmpeg exited (code=${code}, signal=${signal})`);
+    if (code !== 0 && code !== null) {
+      ws.send(JSON.stringify({ type: 'error', message: `ffmpeg/Icecast connection failed (exit code ${code}) — check bridge logs` }));
     }
   });
-  return req;
+
+  return ffmpeg;
 }
 
 wss.on('connection', (ws) => {
   let authed = false;
-  let icecastReq = null;
+  let ffmpeg = null;
 
   ws.on('message', (data, isBinary) => {
     if (!authed) {
@@ -106,19 +93,22 @@ wss.on('connection', (ws) => {
       }
       authed = true;
       activeBroadcaster = ws;
-      icecastReq = openIcecastRequest(ws);
+      ffmpeg = spawnFfmpeg(ws);
       ws.send(JSON.stringify({ type: 'on-air' }));
-      console.log('Broadcaster connected, streaming to Icecast');
+      console.log('Broadcaster connected, streaming to Icecast via ffmpeg');
       return;
     }
 
-    if (isBinary && icecastReq) {
-      icecastReq.write(data);
+    if (isBinary && ffmpeg && ffmpeg.stdin.writable) {
+      ffmpeg.stdin.write(data);
     }
   });
 
   ws.on('close', () => {
-    if (icecastReq) icecastReq.end();
+    if (ffmpeg) {
+      ffmpeg.stdin.end();
+      setTimeout(() => ffmpeg.kill(), 2000); // give it a moment to flush, then force-stop
+    }
     if (activeBroadcaster === ws) {
       activeBroadcaster = null;
       console.log('Broadcaster disconnected');

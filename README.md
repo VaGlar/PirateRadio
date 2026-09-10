@@ -7,14 +7,18 @@
 ## Πώς δουλεύει
 
 ```
-[broadcaster browser] --WebSocket--> [bridge: Render] --HTTP PUT--> [Icecast: Fly.io] <--HTTP-- [listener <audio>]
+[broadcaster browser] --WebSocket--> [bridge: Render, ffmpeg] --Icecast protocol--> [Icecast: Fly.io, MP3] <--HTTP-- [listener <audio>]
 ```
 
 - **Icecast** (`icecast/`) — ο streaming server, τρέχει στο **Fly.io**. Δέχεται
-  το live audio και το αναμεταδίδει σε όποιον ανοίγει το mount URL.
+  το live audio (MP3) και το αναμεταδίδει σε όποιον ανοίγει το mount URL.
 - **bridge** (`bridge/`) — μικρό Node server, τρέχει στο **Render**. Παίρνει
-  το mic audio από τον broadcaster μέσω WebSocket και το προωθεί στο Icecast
-  (ο browser δεν μιλάει απευθείας το πρωτόκολλο source του Icecast).
+  το mic audio (webm/opus) από τον broadcaster μέσω WebSocket και το περνάει
+  σε ένα `ffmpeg` process που το μετατρέπει σε MP3 και το στέλνει στο Icecast
+  μιλώντας απευθείας το πρωτόκολλο source του (πιο αξιόπιστο από να το κάνουμε
+  εμείς με το χέρι). Η μετατροπή σε MP3 χρειάζεται γιατί οι browsers δεν
+  παίζουν αξιόπιστα ένα ατέρμονο webm/opus live stream μέσω `<audio>` tag —
+  το MP3 είναι το format που δουλεύει παντού για live radio.
 - **docs/** — οι δύο web σελίδες: `docs/index.html` (ακρόαση) και
   `docs/broadcast/index.html` (εκπομπή), σερβιρισμένες από **GitHub Pages**.
 
@@ -77,7 +81,7 @@ Blueprint για το bridge (Render), Pages για τις δύο σελίδες
 ### 3. Frontend στο GitHub Pages
 
 1. Επιβεβαίωσε ότι το `docs/index.html` δείχνει στο σωστό Fly hostname
-   (`src="https://<app-name>.fly.dev/radio.webm"`).
+   (`src="https://<app-name>.fly.dev/radio.mp3"`).
 2. Άνοιξε `docs/broadcast/index.html` και βάλε το bridge URL σε `wss://`
    μορφή (π.χ. `wss://pirateradio-bridge.onrender.com`).
 3. Commit & push.
@@ -102,12 +106,12 @@ bridge URL `ws://localhost:3001`.
   webm/opus εγγραφή μέσω `MediaRecorder` — η σελίδα εκπομπής θα δείξει σαφές
   μήνυμα λάθους σε iOS αντί να χαλάσει σιωπηλά. Ακρόαση από iPhone/iPad
   δουλεύει κανονικά.
-- Το Fly.io setup δεν έχει επαληθευτεί ζωντανά από αυτό το session (το
-  sandbox μπλοκάρει έξοδο προς fly.io) — βασίζεται σε τεκμηριωμένη
-  συμπεριφορά Fly.io, όχι σε πραγματικό test εδώ. Το local pipeline
-  (bridge → Icecast, raw audio) έχει επαληθευτεί end-to-end με πραγματικό
-  audio. Αν κάτι σκάσει στο πρώτο GitHub Actions run, στείλε τα logs του
-  workflow και θα διορθωθεί.
+- Το Fly.io mount (`Mount Point /radio.mp3`, peak listeners > 0) έχει
+  επιβεβαιωθεί ζωντανά ότι δουλεύει — το TLS handshake→response πήρε ~1
+  δευτερόλεπτο (έναντι 30+ στο Render). Το ffmpeg→MP3 κομμάτι του bridge
+  έχει δοκιμαστεί end-to-end **τοπικά** (webm chunks μέσω WebSocket → ffmpeg
+  → Icecast → valid, ακούσιμο MP3, επιβεβαιωμένο και με `volumedetect`, όχι
+  απλά ότι το αρχείο είναι έγκυρο) — όχι όμως ακόμα σε πραγματικό deploy.
 
 ## Επόμενα βήματα (προαιρετικά)
 
