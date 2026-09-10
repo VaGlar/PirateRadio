@@ -15,6 +15,12 @@
   .live { color: #dc2626; }
   .off { color: #6b7280; }
   #error { color: #dc2626; margin-top: 10px; font-size: 0.9rem; }
+  select { width: 100%; padding: 10px; font-size: 1rem; margin: 6px 0 12px; box-sizing: border-box; }
+  label { display: block; text-align: left; font-size: 0.85rem; color: #6b7280; margin-top: 10px; }
+  #testBtn { background: #2563eb; color: white; width: 100%; margin-bottom: 10px; }
+  #meterWrap { background: #e5e7eb; border-radius: 6px; height: 14px; overflow: hidden; margin: 8px 0 4px; }
+  #meterBar { background: #16a34a; height: 100%; width: 0%; transition: width 60ms linear; }
+  #meterHint { font-size: 0.8rem; color: #6b7280; }
 </style>
 </head>
 <body>
@@ -23,6 +29,14 @@
   <div id="setup">
     <input id="password" type="password" placeholder="Κωδικός εκπομπής" />
     <input id="bridgeUrl" type="text" placeholder="wss://bridge-host" value="wss://pirateradio-bridge.onrender.com" />
+
+    <label for="micSelect">Μικρόφωνο</label>
+    <select id="micSelect"><option value="">(προεπιλογή συστήματος)</option></select>
+
+    <button id="testBtn" type="button">🎤 Δοκιμή μικροφώνου</button>
+    <div id="meterWrap"><div id="meterBar"></div></div>
+    <div id="meterHint">Μίλησε δυνατά — η μπάρα πρέπει να κινείται. Αν μένει επίπεδη ενώ μιλάς, διάλεξε άλλο μικρόφωνο από πάνω ή έλεγξε τα system settings.</div>
+
     <button id="startBtn">🎙️ On Air</button>
   </div>
 
