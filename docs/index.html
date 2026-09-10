@@ -69,14 +69,46 @@
   #chatBox { margin-top: 26px; text-align: left; }
   #chatBox h2 { font-size: 0.9rem; font-weight: 600; color: var(--muted); text-align: center; margin: 0 0 4px; }
   #chatStatus { font-size: 0.8rem; color: var(--muted); text-align: center; min-height: 1.2em; margin-top: 6px; }
+
+  /* Neon "ON AIR" sign — dim/unlit until the listener actually presses play. */
+  #onairSign {
+    margin: 0 0 20px;
+    padding: 26px 10px;
+    border-radius: 12px;
+    background:
+      repeating-linear-gradient(0deg, #2a2420, #2a2420 17px, #241f1b 17px, #241f1b 19px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.15) 0 40px, rgba(0,0,0,0) 40px 80px);
+    border: 1px solid var(--border);
+  }
+  #onairSign span {
+    font-family: 'Georgia', serif;
+    font-size: 2rem;
+    font-weight: bold;
+    letter-spacing: 0.14em;
+    color: transparent;
+    -webkit-text-stroke: 1.5px #5a5048;
+    transition: color 250ms, text-shadow 250ms, -webkit-text-stroke-color 250ms;
+  }
+  #onairSign.lit span {
+    color: #ff5a4d;
+    -webkit-text-stroke-color: #ffcf8a;
+    text-shadow:
+      0 0 6px #ff5a4d,
+      0 0 16px #ff5a4d,
+      0 0 6px #ffcf8a,
+      0 0 34px #d9a441,
+      0 0 55px #d9a441;
+  }
 </style>
 </head>
 <body>
   <h1>🏴‍☠️ Pirate Radio</h1>
   <p class="tagline">Πάτησε play για να ακούσεις την εκπομπή.</p>
 
+  <div id="onairSign"><span>ON AIR</span></div>
+
   <div class="panel">
-    <audio controls preload="none" src="https://pirateradio-icecast.fly.dev/radio.mp3">
+    <audio id="radioPlayer" controls preload="none" src="https://pirateradio-icecast.fly.dev/radio.mp3">
       Ο browser σου δεν υποστηρίζει audio.
     </audio>
 

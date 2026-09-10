@@ -1,5 +1,14 @@
 const BRIDGE_URL = 'wss://pirateradio-bridge.fly.dev';
 
+// Neon "ON AIR" sign lights up while the listener is actually playing —
+// simplest possible signal, no extra polling needed.
+const onairSign = document.getElementById('onairSign');
+const radioPlayer = document.getElementById('radioPlayer');
+radioPlayer.addEventListener('play', () => onairSign.classList.add('lit'));
+radioPlayer.addEventListener('pause', () => onairSign.classList.remove('lit'));
+radioPlayer.addEventListener('ended', () => onairSign.classList.remove('lit'));
+radioPlayer.addEventListener('error', () => onairSign.classList.remove('lit'));
+
 const chatName = document.getElementById('chatName');
 const chatMessage = document.getElementById('chatMessage');
 const chatSend = document.getElementById('chatSend');
