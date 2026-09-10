@@ -18,16 +18,16 @@ services:
     dockerContext: ./bridge
     plan: free
     envVars:
+      # Render's free plan doesn't reliably resolve internal
+      # service-to-service hostnames, so the bridge talks to Icecast over
+      # its public URL instead (same as listeners do). Set these manually
+      # after both services are up, e.g.:
+      #   ICECAST_HOST = pirateradio-icecast.onrender.com
+      #   ICECAST_PORT = 443
       - key: ICECAST_HOST
-        fromService:
-          type: web
-          name: pirateradio-icecast
-          property: host
+        sync: false
       - key: ICECAST_PORT
-        fromService:
-          type: web
-          name: pirateradio-icecast
-          property: port
+        sync: false
       - key: ICECAST_SOURCE_PASSWORD
         sync: false
       - key: ICECAST_MOUNT

@@ -42,9 +42,15 @@ repo έχει έτοιμο ένα **Render Blueprint** (`render.yaml`) που τ
      βάλε δικούς σου τυχαίους κωδικούς.
    - Στο `pirateradio-bridge`: `ICECAST_SOURCE_PASSWORD` (**ίδιο** με πάνω),
      `BROADCAST_PASSWORD` (ο κωδικός που θα βάζεις εσύ στη σελίδα εκπομπής).
-5. Περίμενε να γίνουν deploy και τα δύο services. Σημείωσε τα public URLs τους
-   (κάτι σαν `https://pirateradio-icecast.onrender.com` και
-   `https://pirateradio-bridge.onrender.com`).
+5. Περίμενε να γίνει deploy το `pirateradio-icecast` και σημείωσε το public
+   URL του (π.χ. `pirateradio-icecast.onrender.com`, χωρίς `https://`).
+6. Πήγαινε στο `pirateradio-bridge` → **Environment** και συμπλήρωσε:
+   - `ICECAST_HOST` = το hostname από το βήμα 5 (π.χ. `pirateradio-icecast.onrender.com`)
+   - `ICECAST_PORT` = `443`
+
+   (Το Render's free plan δεν λύνει αξιόπιστα εσωτερικά service-to-service
+   hostnames, οπότε το bridge μιλάει στο Icecast μέσω του δημόσιου URL του —
+   ίδιο μονοπάτι με τους ακροατές.)
 
 > ⚠️ Το free plan του Render "κοιμίζει" τα services μετά από ανενεργία και
 > χρειάζονται ~30-60s για να ξυπνήσουν στο πρώτο request. Αν το ραδιόφωνο

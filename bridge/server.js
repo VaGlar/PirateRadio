@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const http = require('http');
+const https = require('https');
 const { WebSocketServer } = require('ws');
 
 const {
@@ -24,10 +25,15 @@ console.log(`Bridge listening on ws://0.0.0.0:${listenPort}`);
 
 let activeBroadcaster = null; // only one on-air source at a time
 
-function openIcecastRequest() {
-  const req = http.request({
+function openIcecastRequest(ws) {
+  const port = Number(ICECAST_PORT);
+  // Render's free plan doesn't reliably resolve internal service-to-service
+  // hostnames, so we talk to Icecast over its public URL — same as listeners
+  // do. That means HTTPS on 443, plain HTTP everywhere else (e.g. localhost).
+  const transport = port === 443 ? https : http;
+  const req = transport.request({
     host: ICECAST_HOST,
-    port: Number(ICECAST_PORT),
+    port,
     path: ICECAST_MOUNT,
     method: 'PUT',
     headers: {
@@ -42,10 +48,14 @@ function openIcecastRequest() {
   // framing (since there's no Content-Length for a live stream), which
   // corrupts the audio.
   req.useChunkedEncodingByDefault = false;
-  req.on('error', (err) => console.error('Icecast connection error:', err.message));
+  req.on('error', (err) => {
+    console.error('Icecast connection error:', err.message);
+    ws.send(JSON.stringify({ type: 'error', message: 'Icecast connection failed: ' + err.message }));
+  });
   req.on('response', (res) => {
     if (res.statusCode >= 400) {
       console.error(`Icecast rejected the source connection: ${res.statusCode}`);
+      ws.send(JSON.stringify({ type: 'error', message: `Icecast rejected the connection (${res.statusCode})` }));
     }
   });
   return req;
@@ -76,7 +86,7 @@ wss.on('connection', (ws) => {
       }
       authed = true;
       activeBroadcaster = ws;
-      icecastReq = openIcecastRequest();
+      icecastReq = openIcecastRequest(ws);
       ws.send(JSON.stringify({ type: 'on-air' }));
       console.log('Broadcaster connected, streaming to Icecast');
       return;
