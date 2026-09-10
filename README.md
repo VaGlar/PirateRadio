@@ -61,8 +61,8 @@ repo έχει έτοιμο ένα **Render Blueprint** (`render.yaml`) που τ
 4. Στο GitHub repo: **Settings → Pages → Source: Deploy from a branch →
    Branch: main, folder: /docs**.
 5. Μετά από λίγο θα έχεις:
-   - `https://<user>.github.io/<repo>/` — το link για ακρόαση (στείλ' το).
-   - `https://<user>.github.io/<repo>/broadcast/` — το link για εκπομπή.
+   - https://vaglar.github.io/PirateRadio/ — το link για ακρόαση (στείλ' το).
+   - https://vaglar.github.io/PirateRadio/broadcast/ — το link για εκπομπή.
 
 ### Local test (πριν το deploy)
 
