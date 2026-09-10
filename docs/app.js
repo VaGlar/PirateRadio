@@ -9,6 +9,52 @@ radioPlayer.addEventListener('pause', () => onairSign.classList.remove('lit'));
 radioPlayer.addEventListener('ended', () => onairSign.classList.remove('lit'));
 radioPlayer.addEventListener('error', () => onairSign.classList.remove('lit'));
 
+// Custom player bar (play/pause, reload, volume, mute, AirPlay) instead of
+// the native <audio controls> UI — the native one exposes a "..." overflow
+// menu with captions/playback-speed options that don't make sense for a
+// live radio stream and that the browser won't let us remove individually.
+const playBtn = document.getElementById('playBtn');
+const refreshBtn = document.getElementById('refreshBtn');
+const volumeSlider = document.getElementById('volumeSlider');
+const muteVolBtn = document.getElementById('muteVolBtn');
+const airplayBtn = document.getElementById('airplayBtn');
+
+playBtn.addEventListener('click', () => {
+  if (radioPlayer.paused) radioPlayer.play().catch(() => {});
+  else radioPlayer.pause();
+});
+radioPlayer.addEventListener('play', () => { playBtn.textContent = '⏸'; playBtn.setAttribute('aria-label', 'Pause'); });
+radioPlayer.addEventListener('pause', () => { playBtn.textContent = '▶'; playBtn.setAttribute('aria-label', 'Play'); });
+
+// "Refresh" reconnects to the live stream from scratch — useful if the
+// connection stalled or glitched, same idea as reloading a live radio tab.
+refreshBtn.addEventListener('click', () => {
+  const wasPlaying = !radioPlayer.paused;
+  radioPlayer.pause();
+  radioPlayer.load();
+  if (wasPlaying) radioPlayer.play().catch(() => {});
+});
+
+function updateVolIcon() {
+  muteVolBtn.textContent = radioPlayer.muted || radioPlayer.volume === 0 ? '🔇' : '🔊';
+}
+volumeSlider.addEventListener('input', () => {
+  radioPlayer.volume = Number(volumeSlider.value) / 100;
+  if (radioPlayer.volume > 0) radioPlayer.muted = false;
+  updateVolIcon();
+});
+muteVolBtn.addEventListener('click', () => {
+  radioPlayer.muted = !radioPlayer.muted;
+  updateVolIcon();
+});
+
+// AirPlay device picking is a Safari-only API — hide the button everywhere
+// else instead of showing something that does nothing.
+if (typeof radioPlayer.webkitShowPlaybackTargetPicker === 'function') {
+  airplayBtn.style.display = 'inline-block';
+  airplayBtn.addEventListener('click', () => radioPlayer.webkitShowPlaybackTargetPicker());
+}
+
 const chatName = document.getElementById('chatName');
 const chatMessage = document.getElementById('chatMessage');
 const chatSend = document.getElementById('chatSend');

@@ -36,7 +36,26 @@
     padding: 20px;
   }
 
-  audio { width: 100%; margin: 0; }
+  audio { display: none; }
+
+  /* Custom player bar — replaces the native <audio controls> UI, which on
+     some browsers exposes an overflow menu (captions/playback speed) we
+     don't want. Just the controls that actually make sense for a live
+     radio stream: play/pause, reload, volume, mute, AirPlay. */
+  #playerBar { display: flex; align-items: center; gap: 10px; }
+  #playerBar button {
+    width: auto; flex: 0 0 auto;
+    padding: 10px 14px;
+    font-size: 1.1rem;
+    line-height: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  #playerBar button:hover { filter: none; border-color: var(--gold); }
+  #playBtn { font-size: 1.3rem; }
+  #volumeSlider { flex: 1; margin: 0; accent-color: var(--gold); cursor: pointer; }
+  #airplayBtn { display: none; }
 
   input, textarea {
     width: 100%;
@@ -108,9 +127,17 @@
   <div id="onairSign"><span>ON AIR</span></div>
 
   <div class="panel">
-    <audio id="radioPlayer" controls preload="none" src="https://pirateradio-icecast.fly.dev/radio.mp3">
+    <audio id="radioPlayer" preload="none" x-webkit-airplay="allow" src="https://pirateradio-icecast.fly.dev/radio.mp3">
       Ο browser σου δεν υποστηρίζει audio.
     </audio>
+
+    <div id="playerBar">
+      <button id="playBtn" type="button" aria-label="Play">▶</button>
+      <button id="refreshBtn" type="button" aria-label="Ανανέωση" title="Ανανέωση">↻</button>
+      <input id="volumeSlider" type="range" min="0" max="100" value="100" aria-label="Ένταση" />
+      <button id="muteVolBtn" type="button" aria-label="Σίγαση">🔊</button>
+      <button id="airplayBtn" type="button" aria-label="AirPlay" title="AirPlay">📺</button>
+    </div>
 
     <div id="chatBox">
       <h2>📨 Στείλε μήνυμα στην εκπομπή</h2>
