@@ -9,6 +9,11 @@
   h1 { font-size: 2rem; margin-bottom: 4px; }
   p { color: #6b7280; }
   audio { width: 100%; margin-top: 30px; }
+  input, textarea { width: 100%; padding: 10px; font-size: 1rem; margin: 8px 0; box-sizing: border-box; font-family: inherit; }
+  button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border: none; border-radius: 6px; background: #16a34a; color: white; width: 100%; }
+  #chatBox { margin-top: 36px; text-align: left; }
+  #chatBox h2 { font-size: 1rem; color: #374151; text-align: center; }
+  #chatStatus { font-size: 0.8rem; color: #6b7280; text-align: center; min-height: 1.2em; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -18,5 +23,15 @@
   <audio controls preload="none" src="https://pirateradio-icecast.fly.dev/radio.mp3">
     Ο browser σου δεν υποστηρίζει audio.
   </audio>
+
+  <div id="chatBox">
+    <h2>📨 Στείλε μήνυμα στην εκπομπή</h2>
+    <input id="chatName" type="text" placeholder="Το όνομά σου (προαιρετικό)" maxlength="40" />
+    <textarea id="chatMessage" rows="2" placeholder="Μήνυμα..." maxlength="300"></textarea>
+    <button id="chatSend" type="button">Αποστολή</button>
+    <div id="chatStatus"></div>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>

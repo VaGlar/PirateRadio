@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const { spawn } = require('child_process');
-const { WebSocketServer } = require('ws');
+const { WebSocketServer, WebSocket } = require('ws');
 
 const {
   ICECAST_SOURCE_PASSWORD,
@@ -74,34 +74,54 @@ wss.on('connection', (ws) => {
   const stats = { onAirAt: 0, totalBytes: 0, chunkCount: 0 };
 
   ws.on('message', (data, isBinary) => {
-    if (!authed) {
+    // This same WebSocket endpoint serves two very different clients: the
+    // one broadcaster (sends binary audio after authenticating) and any
+    // number of listeners (send text "chat" messages, no auth needed —
+    // it's a one-way inbox to whoever is currently on air, not a public
+    // chatroom).
+    if (!isBinary) {
       let msg;
       try {
         msg = JSON.parse(data.toString());
       } catch {
-        ws.close(1008, 'expected auth message');
         return;
       }
-      if (msg.type !== 'auth' || msg.password !== BROADCAST_PASSWORD) {
-        ws.send(JSON.stringify({ type: 'error', message: 'wrong password' }));
-        ws.close(1008, 'unauthorized');
+
+      if (msg.type === 'auth') {
+        if (authed) return;
+        if (msg.password !== BROADCAST_PASSWORD) {
+          ws.send(JSON.stringify({ type: 'error', message: 'wrong password' }));
+          ws.close(1008, 'unauthorized');
+          return;
+        }
+        if (activeBroadcaster) {
+          ws.send(JSON.stringify({ type: 'error', message: 'someone is already on air' }));
+          ws.close(1008, 'busy');
+          return;
+        }
+        authed = true;
+        activeBroadcaster = ws;
+        stats.onAirAt = Date.now();
+        ffmpeg = spawnFfmpeg(ws, stats);
+        ws.send(JSON.stringify({ type: 'on-air' }));
+        console.log('Broadcaster connected, streaming to Icecast via ffmpeg');
         return;
       }
-      if (activeBroadcaster) {
-        ws.send(JSON.stringify({ type: 'error', message: 'someone is already on air' }));
-        ws.close(1008, 'busy');
+
+      if (msg.type === 'chat') {
+        const name = String(msg.name || 'Ανώνυμος').slice(0, 40);
+        const text = String(msg.message || '').trim().slice(0, 300);
+        if (!text) return;
+        if (activeBroadcaster && activeBroadcaster.readyState === WebSocket.OPEN) {
+          activeBroadcaster.send(JSON.stringify({ type: 'chat-message', name, message: text, ts: Date.now() }));
+        }
         return;
       }
-      authed = true;
-      activeBroadcaster = ws;
-      stats.onAirAt = Date.now();
-      ffmpeg = spawnFfmpeg(ws, stats);
-      ws.send(JSON.stringify({ type: 'on-air' }));
-      console.log('Broadcaster connected, streaming to Icecast via ffmpeg');
-      return;
+
+      return; // unknown message type from a non-broadcaster connection — ignore
     }
 
-    if (isBinary && ffmpeg && ffmpeg.stdin.writable) {
+    if (isBinary && authed && ffmpeg && ffmpeg.stdin.writable) {
       stats.totalBytes += data.length;
       stats.chunkCount += 1;
       const ok = ffmpeg.stdin.write(data);

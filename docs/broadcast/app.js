@@ -16,6 +16,8 @@ const liveStatsEl = document.getElementById('liveStats');
 const elapsedEl = document.getElementById('elapsed');
 const listenerCountEl = document.getElementById('listenerCount');
 const peakCountEl = document.getElementById('peakCount');
+const inboxEl = document.getElementById('inbox');
+const inboxListEl = document.getElementById('inboxList');
 
 let ws = null;
 let mediaRecorder = null;
@@ -213,6 +215,8 @@ startBtn.addEventListener('click', async () => {
     } else if (msg.type === 'error') {
       errorEl.textContent = msg.message;
       cleanup();
+    } else if (msg.type === 'chat-message') {
+      addChatMessage(msg);
     }
   };
 
@@ -224,6 +228,27 @@ startBtn.addEventListener('click', async () => {
     cleanup();
   };
 });
+
+function addChatMessage(msg) {
+  const empty = document.getElementById('inboxEmpty');
+  if (empty) empty.remove();
+
+  const el = document.createElement('div');
+  el.className = 'msg';
+  const time = new Date(msg.ts || Date.now()).toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
+  const name = document.createElement('span');
+  name.className = 'name';
+  name.textContent = (msg.name || 'Ανώνυμος') + ': ';
+  const timeEl = document.createElement('span');
+  timeEl.className = 'time';
+  timeEl.textContent = time;
+  el.appendChild(name);
+  el.appendChild(document.createTextNode(msg.message || ''));
+  el.appendChild(timeEl);
+
+  inboxListEl.appendChild(el);
+  inboxListEl.scrollTop = inboxListEl.scrollHeight;
+}
 
 function goLive() {
   setupEl.style.display = 'none';
@@ -241,6 +266,8 @@ function goLive() {
   onAirAt = Date.now();
   peakListeners = 0;
   liveStatsEl.style.display = 'block';
+  inboxEl.style.display = 'block';
+  inboxListEl.innerHTML = '<div id="inboxEmpty">Κανένα μήνυμα ακόμα.</div>';
   elapsedTimer = setInterval(() => {
     elapsedEl.textContent = formatElapsed(Date.now() - onAirAt);
   }, 1000);
@@ -280,6 +307,7 @@ function cleanup() {
   muteHintEl.style.display = 'none';
   isMuted = false;
   liveStatsEl.style.display = 'none';
+  inboxEl.style.display = 'none';
   statusEl.textContent = 'Off air';
   statusEl.className = 'off';
 }

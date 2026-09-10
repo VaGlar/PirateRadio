@@ -30,6 +30,13 @@
   #liveStats { display: none; margin-top: 18px; padding: 14px; background: #f3f4f6; border-radius: 8px; }
   #liveStats .row { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 3px 0; }
   #liveStats .row b { font-variant-numeric: tabular-nums; }
+  #inbox { display: none; margin-top: 18px; text-align: left; }
+  #inbox h3 { font-size: 0.95rem; color: #374151; margin-bottom: 6px; }
+  #inboxList { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  #inboxList .msg { background: #f3f4f6; border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; }
+  #inboxList .msg .name { font-weight: bold; color: #2563eb; }
+  #inboxList .msg .time { float: right; color: #9ca3af; font-size: 0.75rem; }
+  #inboxEmpty { color: #9ca3af; font-size: 0.85rem; }
 </style>
 </head>
 <body>
@@ -71,6 +78,11 @@
     <div class="row"><span>⏱️ Διάρκεια</span><b id="elapsed">00:00</b></div>
     <div class="row"><span>🎧 Ακροατές τώρα</span><b id="listenerCount">—</b></div>
     <div class="row"><span>📈 Peak ακροατές</span><b id="peakCount">—</b></div>
+  </div>
+
+  <div id="inbox">
+    <h3>📨 Μηνύματα ακροατών</h3>
+    <div id="inboxList"><div id="inboxEmpty">Κανένα μήνυμα ακόμα.</div></div>
   </div>
 
   <script src="app.js"></script>
