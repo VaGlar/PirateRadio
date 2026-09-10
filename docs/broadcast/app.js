@@ -2,6 +2,22 @@ const MIME_TYPE = 'audio/webm;codecs=opus';
 const BRIDGE_URL = 'wss://pirateradio-bridge.fly.dev';
 const ICECAST_STATUS_URL = 'https://pirateradio-icecast.fly.dev/status-json.xsl';
 
+// Running on battery makes Windows/Chrome throttle CPU and audio-processing
+// priority to save power — that's a common real cause of crackling/glitches
+// in real-time Web Audio apps like this one. Warn early instead of finding
+// out mid-broadcast. Battery Status API is Chrome/Edge-only and optional —
+// just skip the warning on browsers that don't support it.
+const powerWarningEl = document.getElementById('powerWarning');
+if (navigator.getBattery) {
+  navigator.getBattery().then((battery) => {
+    const update = () => {
+      powerWarningEl.style.display = battery.charging ? 'none' : 'block';
+    };
+    update();
+    battery.addEventListener('chargingchange', update);
+  }).catch(() => {});
+}
+
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const testBtn = document.getElementById('testBtn');
