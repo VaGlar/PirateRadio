@@ -1,4 +1,6 @@
 const MIME_TYPE = 'audio/webm;codecs=opus';
+const BRIDGE_URL = 'wss://pirateradio-bridge.fly.dev';
+const ICECAST_STATUS_URL = 'https://pirateradio-icecast.fly.dev/status-json.xsl';
 
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
@@ -6,22 +8,20 @@ const testBtn = document.getElementById('testBtn');
 const micSelect = document.getElementById('micSelect');
 const meterBar = document.getElementById('meterBar');
 const setupEl = document.getElementById('setup');
-const setup2El = document.getElementById('setup2');
 const statusEl = document.getElementById('status');
 const errorEl = document.getElementById('error');
 const monitorToggle = document.getElementById('monitorToggle');
 const muteBtn = document.getElementById('muteBtn');
 const muteHintEl = document.getElementById('muteHint');
+const liveControlsEl = document.getElementById('liveControls');
 const liveStatsEl = document.getElementById('liveStats');
 const elapsedEl = document.getElementById('elapsed');
 const listenerCountEl = document.getElementById('listenerCount');
 const peakCountEl = document.getElementById('peakCount');
 const inboxEl = document.getElementById('inbox');
 const inboxListEl = document.getElementById('inboxList');
-const sysAudioBtn = document.getElementById('sysAudioBtn');
-const sysAudioHint = document.getElementById('sysAudioHint');
-const sysAudioStatus = document.getElementById('sysAudioStatus');
-const sysAudioStopBtn = document.getElementById('sysAudioStopBtn');
+const sysAudioCheck = document.getElementById('sysAudioCheck');
+const mixSliderWrap = document.getElementById('mixSliderWrap');
 const mixSliderEl = document.getElementById('mixSlider');
 
 let ws = null;
@@ -142,7 +142,11 @@ async function attachSysAudio() {
   sysGainNode.connect(limiter);
   updateMixGains();
 
-  audioTracks[0].addEventListener('ended', detachSysAudio); // browser's own "Stop sharing" bar
+  audioTracks[0].addEventListener('ended', () => {
+    // user stopped sharing from the browser's own "Stop sharing" bar
+    detachSysAudio();
+    sysAudioCheck.checked = false;
+  });
 }
 
 function detachSysAudio() {
@@ -153,23 +157,23 @@ function detachSysAudio() {
   if (sysStream) sysStream.getTracks().forEach((t) => t.stop());
   sysStream = null;
   updateMixGains(); // back to mic-only, full volume
-  sysAudioStatus.style.display = 'none';
-  sysAudioBtn.style.display = 'block';
-  sysAudioHint.style.display = 'block';
+  mixSliderWrap.style.display = 'none';
 }
 
-sysAudioBtn.addEventListener('click', async () => {
+sysAudioCheck.addEventListener('change', async () => {
   errorEl.textContent = '';
-  try {
-    await attachSysAudio();
-    sysAudioBtn.style.display = 'none';
-    sysAudioHint.style.display = 'none';
-    sysAudioStatus.style.display = 'block';
-  } catch (err) {
-    errorEl.textContent = 'Ήχος υπολογιστή: ' + err.message;
+  if (sysAudioCheck.checked) {
+    try {
+      await attachSysAudio();
+      mixSliderWrap.style.display = 'block';
+    } catch (err) {
+      errorEl.textContent = 'Spotify/ήχος υπολογιστή: ' + err.message;
+      sysAudioCheck.checked = false;
+    }
+  } else {
+    detachSysAudio();
   }
 });
-sysAudioStopBtn.addEventListener('click', detachSysAudio);
 
 // Mutes the mic only (system audio, if attached, keeps playing) by
 // disabling the track rather than stopping it — MediaRecorder keeps
@@ -178,8 +182,9 @@ sysAudioStopBtn.addEventListener('click', detachSysAudio);
 function setMuted(muted) {
   isMuted = muted;
   if (stream) stream.getAudioTracks().forEach((t) => (t.enabled = !muted));
-  muteBtn.textContent = muted ? '🔇 Muted (πάτα για Live)' : '🎤 Live (πάτα για Mute)';
+  muteBtn.textContent = muted ? '🔇 MUTED — πάτα για LIVE' : '🎤 LIVE (πάτα για Mute)';
   muteBtn.classList.toggle('muted', muted);
+  document.body.classList.toggle('muted-bg', muted);
 }
 muteBtn.addEventListener('click', () => setMuted(!isMuted));
 
@@ -242,10 +247,8 @@ function formatElapsed(ms) {
 }
 
 async function pollStats() {
-  const url = document.getElementById('icecastStatusUrl').value.trim();
-  if (!url) return;
   try {
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(ICECAST_STATUS_URL, { cache: 'no-store' });
     const data = await res.json();
     const sources = [].concat(data?.icestats?.source ?? []);
     const listeners = sources.reduce((sum, s) => sum + (s.listeners || 0), 0);
@@ -273,10 +276,9 @@ testBtn.addEventListener('click', async () => {
 startBtn.addEventListener('click', async () => {
   errorEl.textContent = '';
   const password = document.getElementById('password').value;
-  const bridgeUrl = document.getElementById('bridgeUrl').value.trim();
 
-  if (!password || !bridgeUrl) {
-    errorEl.textContent = 'Συμπλήρωσε κωδικό και διεύθυνση bridge.';
+  if (!password) {
+    errorEl.textContent = 'Συμπλήρωσε τον κωδικό εκπομπής.';
     return;
   }
 
@@ -296,7 +298,7 @@ startBtn.addEventListener('click', async () => {
     return;
   }
 
-  ws = new WebSocket(bridgeUrl);
+  ws = new WebSocket(BRIDGE_URL);
   ws.binaryType = 'arraybuffer';
 
   ws.onopen = () => {
@@ -347,10 +349,10 @@ function addChatMessage(msg) {
 
 function goLive() {
   setupEl.style.display = 'none';
-  setup2El.style.display = 'none';
   stopBtn.style.display = 'inline-block';
   muteBtn.style.display = 'block';
   muteHintEl.style.display = 'block';
+  liveControlsEl.style.display = 'block';
   setMuted(false);
   statusEl.textContent = '🔴 ON AIR';
   statusEl.className = 'live';
@@ -387,6 +389,7 @@ function cleanup() {
   if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
   if (stream) stream.getTracks().forEach((t) => t.stop());
   detachSysAudio();
+  sysAudioCheck.checked = false;
   if (ws) ws.close();
 
   if (meterRAF) cancelAnimationFrame(meterRAF);
@@ -409,11 +412,12 @@ function cleanup() {
   stream = null;
   ws = null;
   setupEl.style.display = 'block';
-  setup2El.style.display = 'block';
   stopBtn.style.display = 'none';
   muteBtn.style.display = 'none';
   muteHintEl.style.display = 'none';
+  liveControlsEl.style.display = 'none';
   isMuted = false;
+  document.body.classList.remove('muted-bg');
   liveStatsEl.style.display = 'none';
   inboxEl.style.display = 'none';
   statusEl.textContent = 'Off air';
