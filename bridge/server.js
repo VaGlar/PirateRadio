@@ -39,7 +39,7 @@ function spawnFfmpeg(ws, stats) {
     '-i', 'pipe:0',
     '-vn',
     '-c:a', 'libmp3lame',
-    '-b:a', '128k',
+    '-b:a', '192k',
     '-content_type', 'audio/mpeg',
     '-ice_name', 'Pirate Radio',
     '-ice_public', '1',

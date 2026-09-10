@@ -218,7 +218,11 @@ function goLive() {
   pollStats();
   statsTimer = setInterval(pollStats, 5000);
 
-  mediaRecorder = new MediaRecorder(stream, { mimeType: MIME_TYPE });
+  // Browsers default MediaRecorder's audio bitrate low (tuned for voice
+  // calls, not music) — for Stereo Mix / music input especially, that gets
+  // re-compressed again into MP3 downstream and the result sounds noisy.
+  // Force a bitrate high enough for clean music before that happens.
+  mediaRecorder = new MediaRecorder(stream, { mimeType: MIME_TYPE, audioBitsPerSecond: 192000 });
   mediaRecorder.ondataavailable = async (event) => {
     if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
       const buffer = await event.data.arrayBuffer();
