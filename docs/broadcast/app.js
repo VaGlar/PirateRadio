@@ -230,18 +230,35 @@ output2Select.addEventListener('change', () => applyOutputDevice(monitorAudio2, 
 // move together against the music. Mic stays at full volume regardless of
 // the slider until music is actually attached — there's nothing to fade
 // against yet.
-const mixReadoutEl = document.getElementById('mixReadout');
-
 function updateMixGains() {
-  const raw = Number(mixSliderEl.value);
-  const pos = raw / 100;
+  const pos = Number(mixSliderEl.value) / 100;
   const micLevel = sysGainNode ? Math.cos((pos * Math.PI) / 2) : 1;
   if (micGainNode) micGainNode.gain.value = micLevel;
   if (mic2GainNode) mic2GainNode.gain.value = micLevel;
   if (sysGainNode) sysGainNode.gain.value = Math.sin((pos * Math.PI) / 2);
-  mixReadoutEl.textContent = `${100 - raw} / ${raw}`;
 }
 mixSliderEl.addEventListener('input', updateMixGains);
+
+// Drive the slider directly from pointer position instead of relying on the
+// browser to detect a grab on the (small) native thumb — press down
+// anywhere across the control and it jumps + drags from there immediately,
+// tracking the pointer 1:1 for as long as the button stays down. This is
+// what actually fixes "it gets stuck and won't slide", not just a bigger
+// thumb: you no longer need to land on the thumb pixel at all.
+function setMixFromClientX(clientX) {
+  const rect = mixSliderEl.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+  mixSliderEl.value = String(Math.round(pct));
+  updateMixGains();
+}
+mixSliderEl.addEventListener('pointerdown', (e) => {
+  mixSliderEl.setPointerCapture(e.pointerId);
+  setMixFromClientX(e.clientX);
+});
+mixSliderEl.addEventListener('pointermove', (e) => {
+  if (e.buttons !== 1) return;
+  setMixFromClientX(e.clientX);
+});
 
 function attachMic(newStream) {
   ensureAudioGraph();
