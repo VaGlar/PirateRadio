@@ -419,11 +419,12 @@ sysAudioCheck.addEventListener('change', async () => {
 });
 
 // Two layers of mute: the big ON AIR button is a master mute for both mics
-// at once (ad breaks, "hold on a sec" for the whole show); the small button
-// next to each host's name mutes just that person's own mic, independent
-// of the other. Disabling tracks rather than stopping them either way —
-// MediaRecorder keeps running and sends silence instead, so the connection
-// to Icecast never drops.
+// at once (ad breaks, "hold on a sec" for the whole show); the small pill
+// next to each host's name mutes just that person's own mic. Toggling the
+// master always resets and syncs both individual pills to match it (so a
+// host's pill never sits there looking "live" while the master has them
+// silenced anyway) — from that point either host can still mute just
+// themselves independently, until the master is toggled again.
 let mic1Muted = false;
 let mic2Muted = false;
 
@@ -434,6 +435,10 @@ function applyMicEnabled() {
 
 function setMuted(muted) {
   isMuted = muted;
+  mic1Muted = muted;
+  mic2Muted = muted;
+  hostMute1.classList.toggle('live', !muted);
+  hostMute2.classList.toggle('live', !muted);
   applyMicEnabled();
   muteBtn.classList.toggle('lit', !muted);
   document.body.classList.toggle('muted-bg', muted);
@@ -452,14 +457,12 @@ document.addEventListener('keydown', (e) => {
 hostMute1.addEventListener('click', () => {
   mic1Muted = !mic1Muted;
   applyMicEnabled();
-  hostMute1.classList.toggle('muted', mic1Muted);
-  hostMute1.textContent = mic1Muted ? '🔇' : '🎙️';
+  hostMute1.classList.toggle('live', !mic1Muted);
 });
 hostMute2.addEventListener('click', () => {
   mic2Muted = !mic2Muted;
   applyMicEnabled();
-  hostMute2.classList.toggle('muted', mic2Muted);
-  hostMute2.textContent = mic2Muted ? '🔇' : '🎙️';
+  hostMute2.classList.toggle('live', !mic2Muted);
 });
 
 function fillDeviceSelects(selects, devices, fallbackLabel) {
@@ -676,13 +679,7 @@ function goLive() {
   stopBtn.style.display = 'inline-block';
   muteBtn.style.display = 'block';
   liveControlsEl.style.display = 'block';
-  mic1Muted = false;
-  mic2Muted = false;
-  hostMute1.classList.remove('muted');
-  hostMute1.textContent = '🎙️';
-  hostMute2.classList.remove('muted');
-  hostMute2.textContent = '🎙️';
-  setMuted(false);
+  setMuted(false); // also resets/syncs both host mute pills to live
   statusEl.textContent = 'Ζωντανά τώρα';
 
   hostName1El.textContent = name1Input.value.trim() || 'Παραγωγός 1';
