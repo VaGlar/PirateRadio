@@ -25,6 +25,7 @@ const test2Btn = document.getElementById('test2Btn');
 const micSelect = document.getElementById('micSelect');
 const mic2Check = document.getElementById('mic2Check');
 const mic2Wrap = document.getElementById('mic2Wrap');
+const output1Wrap = document.getElementById('output1Wrap');
 const mic2Select = document.getElementById('mic2Select');
 const meterBar = document.getElementById('meterBar');
 const meter2Bar = document.getElementById('meter2Bar');
@@ -354,6 +355,7 @@ function detachMic2() {
 
 mic2Check.addEventListener('change', () => {
   mic2Wrap.style.display = mic2Check.checked ? 'block' : 'none';
+  output1Wrap.style.display = mic2Check.checked ? 'block' : 'none';
   if (mic2Check.checked) {
     ensureAudioGraph();
     setupDualMonitor();
