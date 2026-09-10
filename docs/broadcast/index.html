@@ -6,19 +6,15 @@
 <title>Pirate Radio — On Air</title>
 <style>
   :root {
-    --bg-0: #150e0a;
-    --bg-1: #1f150e;
-    --panel: #2a1d13;
-    --panel-2: #241a10;
-    --panel-border: #4a3520;
-    --gold: #e3a83b;
-    --gold-bright: #f4c360;
-    --cream: #f1e6d3;
-    --muted: #b8a98d;
-    --red: #d64545;
-    --green: #4caf6f;
+    --bg: #1c1917;
+    --panel: #26221f;
+    --border: #3a352f;
+    --gold: #d9a441;
+    --text: #ece7e1;
+    --muted: #8f887e;
+    --red: #cf5454;
+    --green: #4a9c6d;
   }
-
   * { box-sizing: border-box; }
 
   body {
@@ -27,52 +23,33 @@
     margin: 0 auto;
     padding: 44px 20px 60px;
     text-align: center;
-    background:
-      radial-gradient(ellipse at top, rgba(227, 168, 59, 0.08), transparent 60%),
-      linear-gradient(180deg, var(--bg-0), var(--bg-1));
-    color: var(--cream);
+    background: var(--bg);
+    color: var(--text);
     min-height: 100vh;
     transition: background 200ms;
   }
-  body.muted-bg {
-    background:
-      radial-gradient(ellipse at top, rgba(214, 69, 69, 0.22), transparent 65%),
-      linear-gradient(180deg, var(--bg-0), var(--bg-1));
-  }
+  body.muted-bg { background: #2a1616; }
 
-  h1 {
-    font-family: 'Georgia', serif;
-    font-size: 1.5rem;
-    margin: 0 0 26px;
-    letter-spacing: 0.02em;
-    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
+  h1 { font-size: 1.35rem; margin: 0 0 24px; }
 
   .panel {
     background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
     padding: 20px;
     margin-bottom: 16px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.03);
     text-align: left;
   }
 
   input[type="password"], input[type="text"] {
     width: 100%; padding: 11px 12px; font-size: 0.95rem; margin: 8px 0; box-sizing: border-box;
-    background: var(--bg-0); border: 1px solid var(--panel-border); border-radius: 8px; color: var(--cream);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text);
   }
   input::placeholder { color: var(--muted); }
   input:focus { outline: none; border-color: var(--gold); }
 
-  button {
-    padding: 12px 24px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
-    border: none; border-radius: 8px; letter-spacing: 0.02em;
-  }
-  #startBtn { background: linear-gradient(180deg, var(--gold-bright), var(--gold)); color: #24160a; width: 100%; }
+  button { padding: 12px 24px; font-size: 0.95rem; font-weight: 600; cursor: pointer; border: none; border-radius: 8px; }
+  #startBtn { background: var(--gold); color: #1c1917; width: 100%; }
   #stopBtn { background: var(--red); color: white; width: 100%; margin-top: 10px; }
   #status { margin-top: 18px; font-weight: bold; text-align: center; }
   .live { color: var(--red); }
@@ -81,24 +58,24 @@
 
   select {
     width: 100%; padding: 10px; font-size: 0.95rem; margin: 6px 0 12px; box-sizing: border-box;
-    background: var(--bg-0); border: 1px solid var(--panel-border); border-radius: 8px; color: var(--cream);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text);
   }
   label { display: block; text-align: left; font-size: 0.82rem; color: var(--muted); margin-top: 10px; }
-  #testBtn { background: var(--panel-2); border: 1px solid var(--panel-border); color: var(--gold); width: 100%; margin-bottom: 10px; }
+  #testBtn { background: var(--bg); border: 1px solid var(--border); color: var(--text); width: 100%; margin-bottom: 10px; }
 
-  #meterWrap { background: var(--bg-0); border: 1px solid var(--panel-border); border-radius: 6px; height: 14px; overflow: hidden; margin: 8px 0 4px; }
-  #meterBar { background: linear-gradient(90deg, var(--green), var(--gold-bright)); height: 100%; width: 0%; transition: width 60ms linear; }
+  #meterWrap { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; height: 14px; overflow: hidden; margin: 8px 0 4px; }
+  #meterBar { background: var(--gold); height: 100%; width: 0%; transition: width 60ms linear; }
   #meterHint { font-size: 0.78rem; color: var(--muted); }
 
   /* Mute button — deliberately loud: this is the one thing that must be
      impossible to miss while live. */
-  #muteBtn { display: none; width: 100%; padding: 22px; font-size: 1.3rem; font-weight: bold; border-radius: 12px; margin-bottom: 16px; background: linear-gradient(180deg, #5fcf87, var(--green)); color: #06210f; }
-  #muteBtn.muted { background: linear-gradient(180deg, #ef6b6b, var(--red)); color: white; animation: mutePulse 1s infinite; box-shadow: 0 0 0 4px rgba(214, 69, 69, 0.35); }
-  @keyframes mutePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+  #muteBtn { display: none; width: 100%; padding: 22px; font-size: 1.3rem; font-weight: bold; border-radius: 10px; margin-bottom: 16px; background: var(--green); color: white; }
+  #muteBtn.muted { background: var(--red); animation: mutePulse 1s infinite; }
+  @keyframes mutePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.65; } }
   #muteHint { display: none; font-size: 0.78rem; color: var(--muted); margin: -8px 0 14px; text-align: center; }
 
   #liveControls { display: none; }
-  .checkRow { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; margin: 8px 0; color: var(--cream); }
+  .checkRow { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; margin: 8px 0; }
   .checkRow input { width: auto; margin: 0; accent-color: var(--gold); }
   #mixSliderWrap { display: none; margin-top: 10px; }
   #mixSliderWrap .labels { display: flex; justify-content: space-between; font-size: 0.74rem; color: var(--muted); }
@@ -106,12 +83,12 @@
 
   #liveStats { display: none; }
   #liveStats .row { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 4px 0; }
-  #liveStats .row b { font-variant-numeric: tabular-nums; color: var(--gold-bright); }
+  #liveStats .row b { font-variant-numeric: tabular-nums; color: var(--gold); }
   #inbox { display: none; }
-  #inbox h3 { font-size: 0.95rem; color: var(--gold); margin: 0 0 10px; }
+  #inbox h3 { font-size: 0.95rem; color: var(--muted); font-weight: 600; margin: 0 0 10px; }
   #inboxList { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-  #inboxList .msg { background: var(--panel-2); border: 1px solid var(--panel-border); border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; }
-  #inboxList .msg .name { font-weight: bold; color: var(--gold-bright); }
+  #inboxList .msg { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; }
+  #inboxList .msg .name { font-weight: bold; color: var(--gold); }
   #inboxList .msg .time { float: right; color: var(--muted); font-size: 0.75rem; }
   #inboxEmpty { color: var(--muted); font-size: 0.85rem; }
 </style>
