@@ -54,36 +54,6 @@
   #status { margin-top: 18px; font-weight: bold; text-align: center; color: var(--muted); }
   #error { color: var(--red); margin-top: 10px; font-size: 0.9rem; text-align: center; }
 
-  /* Same neon sign as the listener page — lit while actually on air. */
-  #onairSign {
-    margin: 0 0 20px;
-    padding: 22px 10px;
-    border-radius: 12px;
-    background:
-      repeating-linear-gradient(0deg, #2a2420, #2a2420 17px, #241f1b 17px, #241f1b 19px),
-      repeating-linear-gradient(90deg, rgba(0,0,0,0.15) 0 40px, rgba(0,0,0,0) 40px 80px);
-    border: 1px solid var(--border);
-  }
-  #onairSign span {
-    font-family: 'Georgia', serif;
-    font-size: 1.7rem;
-    font-weight: bold;
-    letter-spacing: 0.14em;
-    color: transparent;
-    -webkit-text-stroke: 1.5px #5a5048;
-    transition: color 250ms, text-shadow 250ms, -webkit-text-stroke-color 250ms;
-  }
-  #onairSign.lit span {
-    color: #ff5a4d;
-    -webkit-text-stroke-color: #ffcf8a;
-    text-shadow:
-      0 0 6px #ff5a4d,
-      0 0 16px #ff5a4d,
-      0 0 6px #ffcf8a,
-      0 0 34px #d9a441,
-      0 0 55px #d9a441;
-  }
-
   select {
     width: 100%; padding: 10px; font-size: 0.95rem; margin: 6px 0 12px; box-sizing: border-box;
     background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text);
@@ -95,11 +65,42 @@
   #meterBar { background: var(--gold); height: 100%; width: 0%; transition: width 60ms linear; }
   #meterHint { font-size: 0.78rem; color: var(--muted); }
 
-  /* Mute button — deliberately loud: this is the one thing that must be
-     impossible to miss while live. */
-  #muteBtn { display: none; width: 100%; padding: 22px; font-size: 1.3rem; font-weight: bold; border-radius: 10px; margin-bottom: 16px; background: var(--red); color: white; letter-spacing: 0.03em; }
-  #muteBtn.muted { background: var(--mute-grey); color: #1c1917; animation: mutePulse 0.9s infinite; }
-  @keyframes mutePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+  /* Mute button doubles as the neon "ON AIR" sign — lit and glowing while
+     live, unlit and pulsing while muted. Deliberately loud: this is the
+     one thing that must be impossible to miss while live. */
+  #muteBtn {
+    display: none;
+    width: 100%;
+    padding: 22px 10px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background:
+      repeating-linear-gradient(0deg, #2a2420, #2a2420 17px, #241f1b 17px, #241f1b 19px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.15) 0 40px, rgba(0,0,0,0) 40px 80px);
+  }
+  #muteBtn span {
+    font-family: 'Georgia', serif;
+    font-size: 1.6rem;
+    font-weight: bold;
+    letter-spacing: 0.12em;
+    color: #ff5a4d;
+    text-shadow:
+      0 0 6px #ff5a4d,
+      0 0 16px #ff5a4d,
+      0 0 6px #ffcf8a,
+      0 0 34px #d9a441,
+      0 0 55px #d9a441;
+    transition: color 250ms, text-shadow 250ms, -webkit-text-stroke-color 250ms;
+  }
+  #muteBtn.muted span {
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--mute-grey);
+    text-shadow: none;
+    animation: mutePulse 0.9s infinite;
+  }
+  @keyframes mutePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
   #muteHint { display: none; font-size: 0.78rem; color: var(--muted); margin: -8px 0 14px; text-align: center; }
 
   #liveControls { display: none; }
@@ -124,8 +125,6 @@
 <body>
   <h1 style="text-align:center">🏴‍☠️ Pirate Radio — Broadcaster</h1>
 
-  <div id="onairSign"><span>ON AIR</span></div>
-
   <!-- Before On Air -->
   <div id="setup" class="panel">
     <input id="password" type="password" placeholder="Κωδικός εκπομπής" />
@@ -141,7 +140,7 @@
   </div>
 
   <!-- While On Air -->
-  <button id="muteBtn" type="button">🎤 LIVE (πάτα για Mute)</button>
+  <button id="muteBtn" type="button"><span id="muteBtnText">ON AIR</span></button>
   <div id="muteHint">Πλήκτρο <b>Space</b> κάνει το ίδιο (όσο δεν πληκτρολογείς σε πεδίο).</div>
 
   <div id="liveControls" class="panel">

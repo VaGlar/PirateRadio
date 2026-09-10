@@ -8,7 +8,7 @@ const testBtn = document.getElementById('testBtn');
 const micSelect = document.getElementById('micSelect');
 const meterBar = document.getElementById('meterBar');
 const setupEl = document.getElementById('setup');
-const onairSign = document.getElementById('onairSign');
+const muteBtnText = document.getElementById('muteBtnText');
 const statusEl = document.getElementById('status');
 const errorEl = document.getElementById('error');
 const monitorToggle = document.getElementById('monitorToggle');
@@ -183,7 +183,7 @@ sysAudioCheck.addEventListener('change', async () => {
 function setMuted(muted) {
   isMuted = muted;
   if (stream) stream.getAudioTracks().forEach((t) => (t.enabled = !muted));
-  muteBtn.textContent = muted ? '🔇 MUTED — πάτα για LIVE' : '🎤 LIVE (πάτα για Mute)';
+  muteBtnText.textContent = muted ? 'MUTED' : 'ON AIR';
   muteBtn.classList.toggle('muted', muted);
   document.body.classList.toggle('muted-bg', muted);
 }
@@ -356,7 +356,6 @@ function goLive() {
   liveControlsEl.style.display = 'block';
   setMuted(false);
   statusEl.textContent = 'Ζωντανά τώρα';
-  onairSign.classList.add('lit');
 
   updateMonitor();
 
@@ -422,7 +421,6 @@ function cleanup() {
   liveStatsEl.style.display = 'none';
   inboxEl.style.display = 'none';
   statusEl.textContent = 'Off air';
-  onairSign.classList.remove('lit');
 }
 
 stopBtn.addEventListener('click', cleanup);
