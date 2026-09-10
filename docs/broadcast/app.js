@@ -10,7 +10,6 @@ const setup2El = document.getElementById('setup2');
 const statusEl = document.getElementById('status');
 const errorEl = document.getElementById('error');
 const monitorToggle = document.getElementById('monitorToggle');
-const monitorAudio = document.getElementById('monitorAudio');
 const liveStatsEl = document.getElementById('liveStats');
 const elapsedEl = document.getElementById('elapsed');
 const listenerCountEl = document.getElementById('listenerCount');
@@ -21,6 +20,7 @@ let mediaRecorder = null;
 let stream = null;
 let audioCtx = null;
 let analyser = null;
+let monitorGain = null;
 let meterRAF = null;
 let onAirAt = 0;
 let elapsedTimer = null;
@@ -55,10 +55,23 @@ async function acquireStream() {
 
 function startMeter(liveStream) {
   stopMeter();
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+  const source = audioCtx.createMediaStreamSource(liveStream);
+
   analyser = audioCtx.createAnalyser();
   analyser.fftSize = 512;
-  audioCtx.createMediaStreamSource(liveStream).connect(analyser);
+  source.connect(analyser);
+
+  // Self-monitor routed through the same low-latency Web Audio graph
+  // instead of a separate <audio> element — an <audio>.srcObject playback
+  // path adds a very noticeable extra delay (100-300ms+) on top of what's
+  // already an audio pipeline; staying inside the Web Audio graph keeps it
+  // down to a few ms, close to actually hearing yourself.
+  monitorGain = audioCtx.createGain();
+  monitorGain.gain.value = monitorToggle.checked ? 1 : 0;
+  source.connect(monitorGain);
+  monitorGain.connect(audioCtx.destination);
+
   const data = new Uint8Array(analyser.frequencyBinCount);
 
   const tick = () => {
@@ -79,17 +92,13 @@ function stopMeter() {
   if (audioCtx) audioCtx.close().catch(() => {});
   audioCtx = null;
   analyser = null;
+  monitorGain = null;
   meterBar.style.width = '0%';
 }
 
 function updateMonitor() {
-  if (monitorToggle.checked && stream) {
-    monitorAudio.srcObject = stream;
-    monitorAudio.muted = false;
-    monitorAudio.play().catch(() => {});
-  } else {
-    monitorAudio.pause();
-    monitorAudio.srcObject = null;
+  if (monitorGain) {
+    monitorGain.gain.value = monitorToggle.checked ? 1 : 0;
   }
 }
 monitorToggle.addEventListener('change', updateMonitor);
@@ -215,8 +224,6 @@ function cleanup() {
   if (stream) stream.getTracks().forEach((t) => t.stop());
   if (ws) ws.close();
   stopMeter();
-  monitorAudio.pause();
-  monitorAudio.srcObject = null;
   if (elapsedTimer) clearInterval(elapsedTimer);
   if (statsTimer) clearInterval(statsTimer);
   elapsedTimer = null;
