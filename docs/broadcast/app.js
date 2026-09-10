@@ -47,8 +47,17 @@ navigator.mediaDevices.addEventListener?.('devicechange', listMicrophones);
 
 async function acquireStream() {
   const deviceId = micSelect.value;
-  const constraints = { audio: deviceId ? { deviceId: { exact: deviceId } } : true };
-  const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+  // echoCancellation/noiseSuppression/autoGainControl are meant for two-way
+  // calls — they run real-time DSP on the mic signal that adds noticeable
+  // latency (and can dull audio quality), unnecessary here since this is a
+  // one-way broadcast mic, not a conferencing input.
+  const audioConstraints = {
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
+  };
+  if (deviceId) audioConstraints.deviceId = { exact: deviceId };
+  const newStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
   await listMicrophones(); // labels are only populated after permission is granted
   return newStream;
 }
