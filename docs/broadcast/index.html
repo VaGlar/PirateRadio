@@ -51,10 +51,38 @@
   button { padding: 12px 24px; font-size: 0.95rem; font-weight: 600; cursor: pointer; border: none; border-radius: 8px; }
   #startBtn { background: var(--gold); color: #1c1917; width: 100%; }
   #stopBtn { background: var(--red); color: white; width: 100%; margin-top: 10px; }
-  #status { margin-top: 18px; font-weight: bold; text-align: center; }
-  .live { color: var(--red); }
-  .off { color: var(--muted); }
+  #status { margin-top: 18px; font-weight: bold; text-align: center; color: var(--muted); }
   #error { color: var(--red); margin-top: 10px; font-size: 0.9rem; text-align: center; }
+
+  /* Same neon sign as the listener page — lit while actually on air. */
+  #onairSign {
+    margin: 0 0 20px;
+    padding: 22px 10px;
+    border-radius: 12px;
+    background:
+      repeating-linear-gradient(0deg, #2a2420, #2a2420 17px, #241f1b 17px, #241f1b 19px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.15) 0 40px, rgba(0,0,0,0) 40px 80px);
+    border: 1px solid var(--border);
+  }
+  #onairSign span {
+    font-family: 'Georgia', serif;
+    font-size: 1.7rem;
+    font-weight: bold;
+    letter-spacing: 0.14em;
+    color: transparent;
+    -webkit-text-stroke: 1.5px #5a5048;
+    transition: color 250ms, text-shadow 250ms, -webkit-text-stroke-color 250ms;
+  }
+  #onairSign.lit span {
+    color: #ff5a4d;
+    -webkit-text-stroke-color: #ffcf8a;
+    text-shadow:
+      0 0 6px #ff5a4d,
+      0 0 16px #ff5a4d,
+      0 0 6px #ffcf8a,
+      0 0 34px #d9a441,
+      0 0 55px #d9a441;
+  }
 
   select {
     width: 100%; padding: 10px; font-size: 0.95rem; margin: 6px 0 12px; box-sizing: border-box;
@@ -96,6 +124,8 @@
 <body>
   <h1 style="text-align:center">🏴‍☠️ Pirate Radio — Broadcaster</h1>
 
+  <div id="onairSign"><span>ON AIR</span></div>
+
   <!-- Before On Air -->
   <div id="setup" class="panel">
     <input id="password" type="password" placeholder="Κωδικός εκπομπής" />
@@ -131,7 +161,7 @@
 
   <button id="stopBtn" style="display:none">⏹ Off Air</button>
 
-  <div id="status" class="off">Off air</div>
+  <div id="status">Off air</div>
   <div id="error"></div>
 
   <div id="liveStats" class="panel">
