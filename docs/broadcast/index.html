@@ -256,6 +256,13 @@
   <div id="setup" class="panel">
     <input id="password" type="password" placeholder="Κωδικός εκπομπής" />
 
+    <button id="listenerPassToggleBtn" type="button" style="width:auto; padding:6px 10px; font-size:0.82rem; background:var(--bg); border:1px solid var(--border); color:var(--text); margin-bottom:10px;">🔑 Κωδικός ακροατών</button>
+    <div id="listenerPassWrap" style="display:none; margin-bottom:10px;">
+      <input id="listenerPassInput" type="text" placeholder="κωδικός ακροατών" maxlength="60" />
+      <button id="listenerPassSaveBtn" type="button">Αποθήκευση</button>
+      <div id="listenerPassStatus" style="font-size:0.8rem; color:var(--muted); margin-top:4px;"></div>
+    </div>
+
     <div class="grid2">
       <div class="col">
         <label for="name1Input">Όνομα παραγωγού 1</label>

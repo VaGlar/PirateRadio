@@ -118,11 +118,6 @@ let listenerName = ''; // set once the login gate is passed — see bottom of fi
 function ensureConnection() {
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return ws;
   ws = new WebSocket(BRIDGE_URL);
-  // Announce this listener to the bridge so the broadcaster can see who's
-  // currently on the page, not just a raw connection count.
-  ws.addEventListener('open', () => {
-    if (listenerName) ws.send(JSON.stringify({ type: 'listener-hello', name: listenerName }));
-  });
   return ws;
 }
 
@@ -166,12 +161,12 @@ chatMessage.addEventListener('keydown', (e) => {
   }
 });
 
-// Simple name + shared-passphrase gate — lets the broadcaster see who's
-// listening and keeps casual passers-by out. The passphrase lives in this
-// file, which is public source on GitHub Pages, so this is a courtesy
-// lock for the crew, not real security — don't put anything sensitive
-// behind it.
-const LISTENER_PASSPHRASE = 'yohoho';
+// Name + shared-passphrase gate — lets the broadcaster see who's listening
+// and keeps casual passers-by out. The passphrase is checked by the bridge
+// (not hardcoded here) so the broadcaster can change it live from their
+// setup screen — how the new passphrase reaches everyone is on them
+// (Slack, shouting across the office, whatever), not something this page
+// automates. Still a courtesy lock for the crew, not real security.
 const LOGIN_STORAGE_KEY = 'pirateradio-login';
 
 const loginGate = document.getElementById('loginGate');
@@ -186,32 +181,60 @@ function enterSite(name) {
   loginGate.style.display = 'none';
   mainContent.style.display = 'block';
   chatName.value = name;
-  ensureConnection(); // announce presence right away, even before they send any chat message
 }
 
-function attemptLogin() {
+// Sends 'listener-login' to the bridge and waits for ok/error. `fromStorage`
+// marks a silent retry using a remembered passphrase (page reload) — if
+// that one's rejected (the broadcaster changed it since), the saved login
+// is cleared and the gate shows again instead of erroring at someone who
+// didn't just type anything.
+function attemptLogin(name, passphrase, { fromStorage } = {}) {
+  const socket = ensureConnection();
+
+  const handleMessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.type !== 'listener-login-ok' && msg.type !== 'listener-login-error') return;
+    socket.removeEventListener('message', handleMessage);
+    loginBtn.disabled = false;
+
+    if (msg.type === 'listener-login-ok') {
+      localStorage.setItem(LOGIN_STORAGE_KEY, JSON.stringify({ name, passphrase }));
+      enterSite(name);
+    } else if (fromStorage) {
+      localStorage.removeItem(LOGIN_STORAGE_KEY);
+    } else {
+      loginError.textContent = 'Λάθος κωδικός.';
+    }
+  };
+  socket.addEventListener('message', handleMessage);
+
+  const send = () => socket.send(JSON.stringify({ type: 'listener-login', name, passphrase }));
+  if (socket.readyState === WebSocket.OPEN) send();
+  else socket.addEventListener('open', send, { once: true });
+}
+
+loginBtn.addEventListener('click', () => {
   const name = loginNameInput.value.trim();
+  const passphrase = loginPassInput.value;
   if (!name) {
     loginError.textContent = 'Γράψε το όνομά σου.';
     return;
   }
-  if (loginPassInput.value !== LISTENER_PASSPHRASE) {
-    loginError.textContent = 'Λάθος κωδικός.';
+  if (!passphrase) {
+    loginError.textContent = 'Γράψε τον κωδικό.';
     return;
   }
   loginError.textContent = '';
-  localStorage.setItem(LOGIN_STORAGE_KEY, JSON.stringify({ name }));
-  enterSite(name);
-}
-
-loginBtn.addEventListener('click', attemptLogin);
+  loginBtn.disabled = true;
+  attemptLogin(name, passphrase);
+});
 loginPassInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') attemptLogin();
+  if (e.key === 'Enter') loginBtn.click();
 });
 
 try {
   const saved = JSON.parse(localStorage.getItem(LOGIN_STORAGE_KEY) || 'null');
-  if (saved && saved.name) enterSite(saved.name);
+  if (saved && saved.name && saved.passphrase) attemptLogin(saved.name, saved.passphrase, { fromStorage: true });
 } catch {
   // corrupted localStorage value — just show the login gate normally
 }

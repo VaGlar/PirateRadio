@@ -9,6 +9,7 @@ const {
   ICECAST_PORT = '8000',
   ICECAST_MOUNT = '/radio.mp3',
   BROADCAST_PASSWORD,
+  LISTENER_PASSPHRASE = 'yohoho',
   BRIDGE_PORT = '3001',
   PORT, // set automatically by Render (and most PaaS) for the public web service port
 } = process.env;
@@ -23,7 +24,13 @@ const wss = new WebSocketServer({ port: listenPort });
 console.log(`Bridge listening on ws://0.0.0.0:${listenPort}`);
 
 let activeBroadcaster = null; // only one on-air source at a time
-const listeners = new Map(); // ws -> name, for listeners who passed the page's login gate and announced themselves
+const listeners = new Map(); // ws -> name, for listeners who passed the login gate
+
+// In-memory only — no persistent storage (no cost), so this resets to the
+// env var default on every bridge restart (e.g. a redeploy). Changed via
+// the broadcaster page's setup screen (set-passphrase), gated behind the
+// same BROADCAST_PASSWORD used to go on air.
+let currentListenerPassphrase = LISTENER_PASSPHRASE;
 
 function broadcastRoster() {
   if (!activeBroadcaster || activeBroadcaster.readyState !== WebSocket.OPEN) return;
@@ -115,10 +122,45 @@ wss.on('connection', (ws) => {
         return;
       }
 
-      if (msg.type === 'listener-hello') {
+      if (msg.type === 'listener-login') {
         const name = String(msg.name || 'Ανώνυμος').slice(0, 40);
+        if (String(msg.passphrase || '') !== currentListenerPassphrase) {
+          ws.send(JSON.stringify({ type: 'listener-login-error', message: 'wrong passphrase' }));
+          return;
+        }
         listeners.set(ws, name);
+        ws.send(JSON.stringify({ type: 'listener-login-ok' }));
         broadcastRoster();
+        return;
+      }
+
+      // These two let the broadcaster's setup screen view/change the
+      // listener passphrase — gated behind the same BROADCAST_PASSWORD,
+      // checked per-message rather than via the stateful 'auth' handshake
+      // above, since that claims the single activeBroadcaster slot and
+      // would collide with (or block) an actual on-air session.
+      if (msg.type === 'get-passphrase') {
+        if (msg.password !== BROADCAST_PASSWORD) {
+          ws.send(JSON.stringify({ type: 'passphrase-error', message: 'wrong password' }));
+          return;
+        }
+        ws.send(JSON.stringify({ type: 'passphrase', value: currentListenerPassphrase }));
+        return;
+      }
+
+      if (msg.type === 'set-passphrase') {
+        if (msg.password !== BROADCAST_PASSWORD) {
+          ws.send(JSON.stringify({ type: 'passphrase-error', message: 'wrong password' }));
+          return;
+        }
+        const value = String(msg.value || '').trim().slice(0, 60);
+        if (!value) {
+          ws.send(JSON.stringify({ type: 'passphrase-error', message: 'empty passphrase' }));
+          return;
+        }
+        currentListenerPassphrase = value;
+        console.log('Listener passphrase changed');
+        ws.send(JSON.stringify({ type: 'passphrase', value: currentListenerPassphrase }));
         return;
       }
 

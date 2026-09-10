@@ -18,6 +18,71 @@ if (navigator.getBattery) {
   }).catch(() => {});
 }
 
+// Lets the broadcaster view/change the shared listener passphrase from the
+// setup screen. Gated behind the broadcast password (typed into #password
+// above), checked per-request on the bridge — doesn't touch the 'auth'
+// handshake used to actually go on air, so it works before/without ever
+// starting a broadcast. Each request opens its own short-lived socket.
+const listenerPassToggleBtn = document.getElementById('listenerPassToggleBtn');
+const listenerPassWrap = document.getElementById('listenerPassWrap');
+const listenerPassInput = document.getElementById('listenerPassInput');
+const listenerPassSaveBtn = document.getElementById('listenerPassSaveBtn');
+const listenerPassStatus = document.getElementById('listenerPassStatus');
+
+function sendPassphraseAdminRequest(type, extra, onResult) {
+  const broadcastPassword = document.getElementById('password').value;
+  if (!broadcastPassword) {
+    listenerPassStatus.textContent = 'Γράψε πρώτα τον κωδικό εκπομπής παραπάνω.';
+    return;
+  }
+  const socket = new WebSocket(BRIDGE_URL);
+  socket.addEventListener('open', () => {
+    socket.send(JSON.stringify({ type, password: broadcastPassword, ...extra }));
+  });
+  socket.addEventListener('message', (event) => {
+    onResult(JSON.parse(event.data));
+    socket.close();
+  });
+  socket.addEventListener('error', () => {
+    listenerPassStatus.textContent = 'Πρόβλημα σύνδεσης με το bridge.';
+  });
+}
+
+listenerPassToggleBtn.addEventListener('click', () => {
+  const opening = listenerPassWrap.style.display === 'none';
+  listenerPassWrap.style.display = opening ? 'block' : 'none';
+  if (!opening) return;
+
+  listenerPassStatus.textContent = 'Φόρτωση...';
+  sendPassphraseAdminRequest('get-passphrase', {}, (msg) => {
+    if (msg.type === 'passphrase') {
+      listenerPassInput.value = msg.value;
+      listenerPassStatus.textContent = '';
+    } else {
+      listenerPassStatus.textContent = msg.message === 'wrong password' ? 'Λάθος κωδικός εκπομπής.' : 'Σφάλμα.';
+    }
+  });
+});
+
+listenerPassSaveBtn.addEventListener('click', () => {
+  const value = listenerPassInput.value.trim();
+  if (!value) {
+    listenerPassStatus.textContent = 'Γράψε έναν κωδικό.';
+    return;
+  }
+  listenerPassStatus.textContent = 'Αποθήκευση...';
+  sendPassphraseAdminRequest('set-passphrase', { value }, (msg) => {
+    if (msg.type === 'passphrase') {
+      listenerPassStatus.textContent = '✅ Αποθηκεύτηκε.';
+      setTimeout(() => {
+        if (listenerPassStatus.textContent === '✅ Αποθηκεύτηκε.') listenerPassStatus.textContent = '';
+      }, 3000);
+    } else {
+      listenerPassStatus.textContent = msg.message === 'wrong password' ? 'Λάθος κωδικός εκπομπής.' : 'Σφάλμα.';
+    }
+  });
+});
+
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const testBtn = document.getElementById('testBtn');
