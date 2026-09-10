@@ -72,6 +72,8 @@ let mic2Analyser = null;
 let monitorGain = null;
 let monitorDest = null; // only created when 2 co-hosts need separate monitor outputs
 let limiter = null;
+let micDeEsser = null; // dips the "s"/"sh" sibilance band before the limiter
+let mic2DeEsser = null;
 let micSourceNode = null;
 let micGainNode = null;
 let mic2SourceNode = null;
@@ -117,6 +119,24 @@ function ensureAudioGraph() {
   limiter.ratio.value = 20;
   limiter.attack.value = 0.002;
   limiter.release.value = 0.15;
+
+  // The limiter's fast 2ms attack (needed to catch clipping peaks) also
+  // emphasizes sibilance — harsh "s"/"sh" hiss — since those are exactly
+  // the fast, high-frequency transients it reacts hardest to. A static
+  // dip in the sibilant band, before the limiter sees the signal, tames
+  // that without touching the rest of the voice. One per mic so it only
+  // ever touches voice, never the music.
+  micDeEsser = audioCtx.createBiquadFilter();
+  micDeEsser.type = 'peaking';
+  micDeEsser.frequency.value = 6500;
+  micDeEsser.Q.value = 1.4;
+  micDeEsser.gain.value = -8;
+
+  mic2DeEsser = audioCtx.createBiquadFilter();
+  mic2DeEsser.type = 'peaking';
+  mic2DeEsser.frequency.value = 6500;
+  mic2DeEsser.Q.value = 1.4;
+  mic2DeEsser.gain.value = -8;
 
   limiter.connect(mixDest);
 
@@ -294,7 +314,8 @@ function attachMic(newStream) {
   micSourceNode = audioCtx.createMediaStreamSource(newStream);
   if (!micGainNode) micGainNode = audioCtx.createGain();
   micSourceNode.connect(micGainNode);
-  micGainNode.connect(limiter);
+  micGainNode.connect(micDeEsser);
+  micDeEsser.connect(limiter);
   micGainNode.connect(micAnalyser);
   updateMixGains();
 }
@@ -317,7 +338,8 @@ function attachMic2(newStream) {
   mic2SourceNode = audioCtx.createMediaStreamSource(newStream);
   if (!mic2GainNode) mic2GainNode = audioCtx.createGain();
   mic2SourceNode.connect(mic2GainNode);
-  mic2GainNode.connect(limiter);
+  mic2GainNode.connect(mic2DeEsser);
+  mic2DeEsser.connect(limiter);
   mic2GainNode.connect(mic2Analyser);
   updateMixGains();
 }
@@ -684,6 +706,8 @@ function cleanup() {
   monitorGain = null;
   monitorDest = null;
   limiter = null;
+  micDeEsser = null;
+  mic2DeEsser = null;
   micSourceNode = null;
   micGainNode = null;
   meterBar.style.width = '0%';
