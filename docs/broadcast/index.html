@@ -37,6 +37,12 @@
   #inboxList .msg .name { font-weight: bold; color: #2563eb; }
   #inboxList .msg .time { float: right; color: #9ca3af; font-size: 0.75rem; }
   #inboxEmpty { color: #9ca3af; font-size: 0.85rem; }
+  #sysAudioBtn { background: #7c3aed; color: white; width: 100%; margin-top: 10px; }
+  #sysAudioStopBtn { background: #6b7280; color: white; width: 100%; margin-top: 8px; }
+  #sysAudioHint { font-size: 0.78rem; color: #6b7280; text-align: left; margin: 4px 0 10px; }
+  #sysAudioStatus { display: none; text-align: left; margin-bottom: 10px; }
+  #sysAudioStatus .ok { color: #16a34a; font-size: 0.85rem; font-weight: bold; }
+  input[type="range"] { width: 100%; margin: 4px 0 10px; }
 </style>
 </head>
 <body>
@@ -55,6 +61,17 @@
 
   <div id="meterWrap"><div id="meterBar"></div></div>
   <div id="meterHint">Μίλησε δυνατά — η μπάρα πρέπει να κινείται. Αν μένει επίπεδη ενώ μιλάς, διάλεξε άλλο μικρόφωνο ή έλεγξε τα system settings.</div>
+
+  <button id="sysAudioBtn" type="button">🖥️ Πρόσθεσε ήχο υπολογιστή (π.χ. Spotify)</button>
+  <div id="sysAudioHint">Θα σου ζητηθεί να διαλέξεις tab ή οθόνη — τσέκαρε οπωσδήποτε "Share audio" / "Share tab audio". Δουλεύει σε Chrome/Edge, χωρίς καμία εγκατάσταση.</div>
+  <div id="sysAudioStatus">
+    <div class="ok">✅ Ήχος υπολογιστή ενεργός — μιξάρεται με το μικρόφωνο</div>
+    <label for="micVolume">Ένταση μικροφώνου</label>
+    <input id="micVolume" type="range" min="0" max="1.5" step="0.05" value="1" />
+    <label for="sysVolume">Ένταση μουσικής</label>
+    <input id="sysVolume" type="range" min="0" max="1.5" step="0.05" value="0.6" />
+    <button id="sysAudioStopBtn" type="button">✖ Αφαίρεση ήχου υπολογιστή</button>
+  </div>
 
   <div id="monitorRow">
     <input id="monitorToggle" type="checkbox" />

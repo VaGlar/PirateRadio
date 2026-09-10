@@ -18,26 +18,141 @@ const listenerCountEl = document.getElementById('listenerCount');
 const peakCountEl = document.getElementById('peakCount');
 const inboxEl = document.getElementById('inbox');
 const inboxListEl = document.getElementById('inboxList');
+const sysAudioBtn = document.getElementById('sysAudioBtn');
+const sysAudioHint = document.getElementById('sysAudioHint');
+const sysAudioStatus = document.getElementById('sysAudioStatus');
+const sysAudioStopBtn = document.getElementById('sysAudioStopBtn');
+const micVolumeEl = document.getElementById('micVolume');
+const sysVolumeEl = document.getElementById('sysVolume');
 
 let ws = null;
 let mediaRecorder = null;
-let stream = null;
+let stream = null; // raw mic MediaStream (mute toggles tracks on this)
+let sysStream = null; // raw system/tab-audio MediaStream from getDisplayMedia
+
 let audioCtx = null;
+let mixDest = null; // MediaStreamAudioDestinationNode — MediaRecorder reads from mixDest.stream
 let analyser = null;
 let monitorGain = null;
+let micSourceNode = null;
+let micGainNode = null;
+let sysSourceNode = null;
+let sysGainNode = null;
 let meterRAF = null;
+
 let onAirAt = 0;
 let elapsedTimer = null;
 let statsTimer = null;
 let peakListeners = 0;
 let isMuted = false;
 
-// Mutes whatever's currently selected as input (real mic, Stereo Mix,
-// Voicemeeter Output, ...) by disabling the track rather than stopping it —
-// MediaRecorder keeps running and sends silence instead, so the connection
-// to Icecast never drops. If you're mixing mic+music together upstream
-// (e.g. in Voicemeeter) this mutes that whole combined signal, not just
-// your voice — use Voicemeeter's own per-channel mute for that instead.
+// One persistent Web Audio graph for the whole page session: mic and
+// (optionally) system audio each go through their own GainNode into a
+// shared MediaStreamAudioDestinationNode — that combined stream is what
+// actually gets recorded/broadcast. This is the same idea as a hardware
+// mixer or VB-Cable/Voicemeeter, just implemented in the browser instead
+// of an OS driver, so it works on machines where installing anything
+// isn't possible.
+function ensureAudioGraph() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+  mixDest = audioCtx.createMediaStreamDestination();
+
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 512;
+
+  // Self-monitor: only the mic feeds this, deliberately. Looping system
+  // audio back to the speakers would just double music you're already
+  // hearing natively from its own source.
+  monitorGain = audioCtx.createGain();
+  monitorGain.gain.value = monitorToggle.checked ? 1 : 0;
+  monitorGain.connect(audioCtx.destination);
+
+  startMeterLoop();
+}
+
+function startMeterLoop() {
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  const tick = () => {
+    analyser.getByteTimeDomainData(data);
+    let peak = 0;
+    for (let i = 0; i < data.length; i++) {
+      peak = Math.max(peak, Math.abs(data[i] - 128));
+    }
+    meterBar.style.width = Math.min(100, (peak / 128) * 100 * 2.5) + '%';
+    meterRAF = requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+function attachMic(newStream) {
+  ensureAudioGraph();
+  if (micSourceNode) micSourceNode.disconnect();
+  micSourceNode = audioCtx.createMediaStreamSource(newStream);
+  if (!micGainNode) micGainNode = audioCtx.createGain();
+  micGainNode.gain.value = Number(micVolumeEl.value);
+  micSourceNode.connect(micGainNode);
+  micGainNode.connect(mixDest);
+  micGainNode.connect(analyser);
+  micGainNode.connect(monitorGain);
+}
+
+async function attachSysAudio() {
+  const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+  const audioTracks = display.getAudioTracks();
+  display.getVideoTracks().forEach((t) => t.stop()); // we only wanted the audio
+  if (audioTracks.length === 0) {
+    display.getTracks().forEach((t) => t.stop());
+    throw new Error('Δεν βρέθηκε ήχος — βεβαιώσου ότι τσέκαρες "Share audio"/"Share tab audio".');
+  }
+
+  ensureAudioGraph();
+  sysStream = new MediaStream(audioTracks);
+  sysSourceNode = audioCtx.createMediaStreamSource(sysStream);
+  sysGainNode = audioCtx.createGain();
+  sysGainNode.gain.value = Number(sysVolumeEl.value);
+  sysSourceNode.connect(sysGainNode);
+  sysGainNode.connect(mixDest);
+  sysGainNode.connect(analyser);
+
+  audioTracks[0].addEventListener('ended', detachSysAudio); // browser's own "Stop sharing" bar
+}
+
+function detachSysAudio() {
+  if (sysSourceNode) sysSourceNode.disconnect();
+  if (sysGainNode) sysGainNode.disconnect();
+  sysSourceNode = null;
+  sysGainNode = null;
+  if (sysStream) sysStream.getTracks().forEach((t) => t.stop());
+  sysStream = null;
+  sysAudioStatus.style.display = 'none';
+  sysAudioBtn.style.display = 'block';
+  sysAudioHint.style.display = 'block';
+}
+
+sysAudioBtn.addEventListener('click', async () => {
+  errorEl.textContent = '';
+  try {
+    await attachSysAudio();
+    sysAudioBtn.style.display = 'none';
+    sysAudioHint.style.display = 'none';
+    sysAudioStatus.style.display = 'block';
+  } catch (err) {
+    errorEl.textContent = 'Ήχος υπολογιστή: ' + err.message;
+  }
+});
+sysAudioStopBtn.addEventListener('click', detachSysAudio);
+micVolumeEl.addEventListener('input', () => {
+  if (micGainNode) micGainNode.gain.value = Number(micVolumeEl.value);
+});
+sysVolumeEl.addEventListener('input', () => {
+  if (sysGainNode) sysGainNode.gain.value = Number(sysVolumeEl.value);
+});
+
+// Mutes the mic only (system audio, if attached, keeps playing) by
+// disabling the track rather than stopping it — MediaRecorder keeps
+// running and sends silence instead, so the connection to Icecast never
+// drops.
 function setMuted(muted) {
   isMuted = muted;
   if (stream) stream.getAudioTracks().forEach((t) => (t.enabled = !muted));
@@ -90,49 +205,6 @@ async function acquireStream() {
   return newStream;
 }
 
-function startMeter(liveStream) {
-  stopMeter();
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
-  const source = audioCtx.createMediaStreamSource(liveStream);
-
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 512;
-  source.connect(analyser);
-
-  // Self-monitor routed through the same low-latency Web Audio graph
-  // instead of a separate <audio> element — an <audio>.srcObject playback
-  // path adds a very noticeable extra delay (100-300ms+) on top of what's
-  // already an audio pipeline; staying inside the Web Audio graph keeps it
-  // down to a few ms, close to actually hearing yourself.
-  monitorGain = audioCtx.createGain();
-  monitorGain.gain.value = monitorToggle.checked ? 1 : 0;
-  source.connect(monitorGain);
-  monitorGain.connect(audioCtx.destination);
-
-  const data = new Uint8Array(analyser.frequencyBinCount);
-
-  const tick = () => {
-    analyser.getByteTimeDomainData(data);
-    let peak = 0;
-    for (let i = 0; i < data.length; i++) {
-      peak = Math.max(peak, Math.abs(data[i] - 128));
-    }
-    meterBar.style.width = Math.min(100, (peak / 128) * 100 * 2.5) + '%';
-    meterRAF = requestAnimationFrame(tick);
-  };
-  tick();
-}
-
-function stopMeter() {
-  if (meterRAF) cancelAnimationFrame(meterRAF);
-  meterRAF = null;
-  if (audioCtx) audioCtx.close().catch(() => {});
-  audioCtx = null;
-  analyser = null;
-  monitorGain = null;
-  meterBar.style.width = '0%';
-}
-
 function updateMonitor() {
   if (monitorGain) {
     monitorGain.gain.value = monitorToggle.checked ? 1 : 0;
@@ -169,7 +241,7 @@ testBtn.addEventListener('click', async () => {
   try {
     if (stream) stream.getTracks().forEach((t) => t.stop());
     stream = await acquireStream();
-    startMeter(stream);
+    attachMic(stream);
     updateMonitor();
   } catch (err) {
     errorEl.textContent = 'Δεν δόθηκε πρόσβαση στο μικρόφωνο: ' + err.message;
@@ -196,6 +268,7 @@ startBtn.addEventListener('click', async () => {
     if (!stream || stream.getAudioTracks().some((t) => t.readyState === 'ended')) {
       stream = await acquireStream();
     }
+    attachMic(stream);
   } catch (err) {
     errorEl.textContent = 'Δεν δόθηκε πρόσβαση στο μικρόφωνο: ' + err.message;
     return;
@@ -260,7 +333,6 @@ function goLive() {
   statusEl.textContent = '🔴 ON AIR';
   statusEl.className = 'live';
 
-  startMeter(stream); // keep the meter running while live too, as a sanity check
   updateMonitor();
 
   onAirAt = Date.now();
@@ -275,10 +347,11 @@ function goLive() {
   statsTimer = setInterval(pollStats, 5000);
 
   // Browsers default MediaRecorder's audio bitrate low (tuned for voice
-  // calls, not music) — for Stereo Mix / music input especially, that gets
-  // re-compressed again into MP3 downstream and the result sounds noisy.
-  // Force a bitrate high enough for clean music before that happens.
-  mediaRecorder = new MediaRecorder(stream, { mimeType: MIME_TYPE, audioBitsPerSecond: 192000 });
+  // calls, not music) — for music input especially, that gets re-compressed
+  // again into MP3 downstream and the result sounds noisy. Force a bitrate
+  // high enough for clean music before that happens. Records the *mixed*
+  // stream (mic [+ system audio if attached]), not the raw mic.
+  mediaRecorder = new MediaRecorder(mixDest.stream, { mimeType: MIME_TYPE, audioBitsPerSecond: 192000 });
   mediaRecorder.ondataavailable = async (event) => {
     if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
       const buffer = await event.data.arrayBuffer();
@@ -291,8 +364,20 @@ function goLive() {
 function cleanup() {
   if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
   if (stream) stream.getTracks().forEach((t) => t.stop());
+  detachSysAudio();
   if (ws) ws.close();
-  stopMeter();
+
+  if (meterRAF) cancelAnimationFrame(meterRAF);
+  meterRAF = null;
+  if (audioCtx) audioCtx.close().catch(() => {});
+  audioCtx = null;
+  mixDest = null;
+  analyser = null;
+  monitorGain = null;
+  micSourceNode = null;
+  micGainNode = null;
+  meterBar.style.width = '0%';
+
   if (elapsedTimer) clearInterval(elapsedTimer);
   if (statsTimer) clearInterval(statsTimer);
   elapsedTimer = null;
