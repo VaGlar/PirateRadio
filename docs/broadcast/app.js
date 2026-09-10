@@ -662,7 +662,7 @@ function goLive() {
   onAirAt = Date.now();
   peakListeners = 0;
   liveStatsEl.style.display = 'block';
-  inboxEl.style.display = 'block';
+  inboxEl.style.display = 'flex'; // matches #inbox's flex-column CSS so the message list can stretch to fill the column
   inboxListEl.innerHTML = '<div id="inboxEmpty">Κανένα μήνυμα ακόμα.</div>';
   elapsedTimer = setInterval(() => {
     elapsedEl.textContent = formatElapsed(Date.now() - onAirAt);

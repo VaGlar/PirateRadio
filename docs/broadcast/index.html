@@ -19,9 +19,9 @@
 
   body {
     font-family: system-ui, sans-serif;
-    max-width: 860px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 44px 20px 60px;
+    padding: 44px 24px 60px;
     text-align: center;
     background: var(--bg);
     color: var(--text);
@@ -30,13 +30,20 @@
   }
   body.muted-bg { background: #211f1c; }
 
-  /* Two-column layout so the whole producer UI fits a small laptop screen
-     without scrolling — ON AIR stays full-width on its own, everything
-     else pairs up side by side. Collapses to one column on narrow windows. */
+  /* Setup screen: producer 1 / producer 2 side by side, evenly split. */
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
   .grid2 .col > .panel:last-child { margin-bottom: 0; }
+
+  /* Live screen: everything except messages on the left, messages get the
+     whole right column — wider than the left, and stretched to match its
+     height so the message list gets real room instead of a short box. */
+  .liveGrid { display: grid; grid-template-columns: 2fr 3fr; gap: 16px; align-items: stretch; }
+  .liveGrid > .col { display: flex; flex-direction: column; text-align: left; }
+  #inbox { flex: 1; display: flex; flex-direction: column; margin-bottom: 0; min-height: 0; }
+  #inboxList { flex: 1; }
+
   @media (max-width: 680px) {
-    .grid2 { grid-template-columns: 1fr; }
+    .grid2, .liveGrid { grid-template-columns: 1fr; }
   }
 
   h1 { font-size: 1.35rem; margin: 0 0 24px; }
@@ -183,7 +190,7 @@
   #liveStats .row b { font-variant-numeric: tabular-nums; color: var(--gold); }
   #inbox { display: none; }
   #inbox h3 { font-size: 0.95rem; color: var(--muted); font-weight: 600; margin: 0 0 10px; }
-  #inboxList { max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  #inboxList { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
   #inboxList .msg { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; }
   #inboxList .msg .name { font-weight: bold; color: var(--gold); }
   #inboxList .msg .time { float: right; color: var(--muted); font-size: 0.75rem; }
@@ -264,11 +271,12 @@
     <button id="startBtn">🎙️ On Air</button>
   </div>
 
-  <!-- While On Air -->
-  <button id="muteBtn" type="button"><span>ON AIR</span></button>
-
-  <div class="grid2">
+  <!-- While On Air: everything except messages on the left, messages get
+       the whole (wider) right column. -->
+  <div class="liveGrid">
     <div class="col">
+      <button id="muteBtn" type="button"><span>ON AIR</span></button>
+
       <div id="hostsLive" class="panel">
         <div class="hostRow"><span id="hostName1">Παραγωγός 1</span><div id="liveLamp1" class="lamp"></div></div>
         <div class="hostRow" id="hostRow2" style="display:none"><span id="hostName2">Παραγωγός 2</span><div id="liveLamp2" class="lamp"></div></div>
@@ -290,28 +298,26 @@
           <input id="mixSlider" type="range" min="0" max="100" step="1" value="50" />
         </div>
       </div>
-    </div>
 
-    <div class="col">
       <div id="liveStats" class="panel">
         <div class="row"><span>⏱️ Διάρκεια</span><b id="elapsed">00:00</b></div>
         <div class="row"><span>🎧 Ακροατές τώρα</span><b id="listenerCount">—</b></div>
         <div class="row"><span>📈 Peak ακροατές</span><b id="peakCount">—</b></div>
       </div>
+
+      <button id="stopBtn" style="display:none">⏹ Off Air</button>
+
+      <div id="status">Off air</div>
+      <div id="error"></div>
+    </div>
+
+    <div class="col">
+      <div id="inbox" class="panel">
+        <h3>📨 Μηνύματα ακροατών</h3>
+        <div id="inboxList"><div id="inboxEmpty">Κανένα μήνυμα ακόμα.</div></div>
+      </div>
     </div>
   </div>
-
-  <!-- Messages get the whole bottom of the page — this is the one thing
-       that keeps growing during a show, everything above it is fixed-size. -->
-  <div id="inbox" class="panel">
-    <h3>📨 Μηνύματα ακροατών</h3>
-    <div id="inboxList"><div id="inboxEmpty">Κανένα μήνυμα ακόμα.</div></div>
-  </div>
-
-  <button id="stopBtn" style="display:none">⏹ Off Air</button>
-
-  <div id="status">Off air</div>
-  <div id="error"></div>
 
   <audio id="monitorAudio1" style="display:none"></audio>
   <audio id="monitorAudio2" style="display:none"></audio>
