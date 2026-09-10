@@ -61,9 +61,24 @@
   label { display: block; text-align: left; font-size: 0.82rem; color: var(--muted); margin-top: 10px; }
   #testBtn { background: var(--bg); border: 1px solid var(--border); color: var(--text); width: 100%; margin-bottom: 10px; }
 
-  #meterWrap { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; height: 14px; overflow: hidden; margin: 8px 0 4px; }
-  #meterBar { background: var(--gold); height: 100%; width: 0%; transition: width 60ms linear; }
-  #meterHint { font-size: 0.78rem; color: var(--muted); }
+  .meterRow { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; }
+  .meterRow .meterWrap { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; height: 14px; overflow: hidden; }
+  .meterRow .meterBar { background: var(--gold); height: 100%; width: 0%; transition: width 60ms linear; }
+  .meterHint { font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; }
+
+  .lamp {
+    flex: 0 0 auto;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #3a352f;
+    border: 1px solid var(--border);
+    box-shadow: none;
+    transition: background 100ms, box-shadow 100ms;
+  }
+  .lamp.on {
+    background: #ff5a4d;
+    box-shadow: 0 0 6px #ff5a4d, 0 0 14px #ff5a4d;
+  }
 
   /* Mute button doubles as the exact same neon "ON AIR" sign as the
      listener page: lit while live, unlit while muted. Same markup, same
@@ -130,6 +145,13 @@
     <label for="micSelect">Μικρόφωνο 1</label>
     <select id="micSelect"><option value="">(προεπιλογή συστήματος)</option></select>
 
+    <button id="testBtn" type="button">🎤 Δοκιμή μικροφώνου 1</button>
+    <div class="meterRow">
+      <div class="meterWrap"><div id="meterBar" class="meterBar"></div></div>
+      <div id="lamp1" class="lamp" title="Μικρόφωνο 1"></div>
+    </div>
+    <div class="meterHint">Μίλησε δυνατά — η μπάρα και το λαμπάκι πρέπει να κινούνται.</div>
+
     <div class="checkRow">
       <input id="mic2Check" type="checkbox" />
       <label for="mic2Check" style="margin:0">👥 Δεύτερο άτομο (2ο μικρόφωνο)</label>
@@ -137,12 +159,22 @@
     <div id="mic2Wrap" style="display:none">
       <label for="mic2Select">Μικρόφωνο 2</label>
       <select id="mic2Select"><option value="">(προεπιλογή συστήματος)</option></select>
+
+      <button id="test2Btn" type="button">🎤 Δοκιμή μικροφώνου 2</button>
+      <div class="meterRow">
+        <div class="meterWrap"><div id="meter2Bar" class="meterBar"></div></div>
+        <div id="lamp2" class="lamp" title="Μικρόφωνο 2"></div>
+      </div>
+      <div class="meterHint">Όσο δοκιμάζεις ένα μικρόφωνο, το άλλο κλείνει αυτόματα — ακούγεστε και οι δύο κανονικά στα ακουστικά σας.</div>
+
+      <label for="output1Select">🔈 Έξοδος (ακουστικά) — Άτομο 1</label>
+      <select id="output1Select"><option value="">(προεπιλογή συστήματος)</option></select>
+      <label for="output2Select">🔈 Έξοδος (ακουστικά) — Άτομο 2</label>
+      <select id="output2Select"><option value="">(προεπιλογή συστήματος)</option></select>
+      <div id="outputHint" style="font-size:0.78rem; color: var(--muted); margin-top:-6px;">
+        Διάλεξε ρητά διαφορετική συσκευή για τον καθένα, αλλιώς και οι δύο θα πάνε στην ίδια προεπιλεγμένη — ο ένας από τους δύο δεν θα ακούει τίποτα στο "Άκου τον εαυτό σου".
+      </div>
     </div>
-
-    <button id="testBtn" type="button">🎤 Δοκιμή μικροφώνου</button>
-
-    <div id="meterWrap"><div id="meterBar"></div></div>
-    <div id="meterHint">Μίλησε δυνατά — η μπάρα πρέπει να κινείται.</div>
 
     <button id="startBtn">🎙️ On Air</button>
   </div>
@@ -181,6 +213,9 @@
     <h3>📨 Μηνύματα ακροατών</h3>
     <div id="inboxList"><div id="inboxEmpty">Κανένα μήνυμα ακόμα.</div></div>
   </div>
+
+  <audio id="monitorAudio1" style="display:none"></audio>
+  <audio id="monitorAudio2" style="display:none"></audio>
 
   <script src="app.js"></script>
 </body>

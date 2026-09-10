@@ -5,11 +5,15 @@ const ICECAST_STATUS_URL = 'https://pirateradio-icecast.fly.dev/status-json.xsl'
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const testBtn = document.getElementById('testBtn');
+const test2Btn = document.getElementById('test2Btn');
 const micSelect = document.getElementById('micSelect');
 const mic2Check = document.getElementById('mic2Check');
 const mic2Wrap = document.getElementById('mic2Wrap');
 const mic2Select = document.getElementById('mic2Select');
 const meterBar = document.getElementById('meterBar');
+const meter2Bar = document.getElementById('meter2Bar');
+const lamp1 = document.getElementById('lamp1');
+const lamp2 = document.getElementById('lamp2');
 const setupEl = document.getElementById('setup');
 const statusEl = document.getElementById('status');
 const errorEl = document.getElementById('error');
@@ -26,6 +30,10 @@ const inboxListEl = document.getElementById('inboxList');
 const sysAudioCheck = document.getElementById('sysAudioCheck');
 const mixSliderWrap = document.getElementById('mixSliderWrap');
 const mixSliderEl = document.getElementById('mixSlider');
+const output1Select = document.getElementById('output1Select');
+const output2Select = document.getElementById('output2Select');
+const monitorAudio1 = document.getElementById('monitorAudio1');
+const monitorAudio2 = document.getElementById('monitorAudio2');
 
 let ws = null;
 let mediaRecorder = null;
@@ -35,8 +43,10 @@ let sysStream = null; // raw system/tab-audio MediaStream from getDisplayMedia
 
 let audioCtx = null;
 let mixDest = null; // MediaStreamAudioDestinationNode — MediaRecorder reads from mixDest.stream
-let analyser = null;
+let micAnalyser = null; // per-mic meters/lamps, tapped before the mix so each shows only its own mic
+let mic2Analyser = null;
 let monitorGain = null;
+let monitorDest = null; // only created when 2 co-hosts need separate monitor outputs
 let limiter = null;
 let micSourceNode = null;
 let micGainNode = null;
@@ -64,8 +74,13 @@ function ensureAudioGraph() {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
   mixDest = audioCtx.createMediaStreamDestination();
 
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 512;
+  // Separate analysers tapped from each mic's own gain node (before the
+  // mix) — this is what drives the per-person meter bar + lamp, so each
+  // one only reacts to that person's own mic, not the combined signal.
+  micAnalyser = audioCtx.createAnalyser();
+  micAnalyser.fftSize = 512;
+  mic2Analyser = audioCtx.createAnalyser();
+  mic2Analyser.fftSize = 512;
 
   // Mic + music summed together can exceed 0dB and clip — Web Audio just
   // adds signals linearly with no automatic ceiling. Clipping is exactly
@@ -80,7 +95,6 @@ function ensureAudioGraph() {
   limiter.release.value = 0.15;
 
   limiter.connect(mixDest);
-  limiter.connect(analyser);
 
   // Self-monitor destination. Mic always feeds it (via the limiter); system
   // audio (if attached) does too — see attachSysAudio — so once you've
@@ -91,22 +105,95 @@ function ensureAudioGraph() {
   limiter.connect(monitorGain);
   monitorGain.connect(audioCtx.destination);
 
+  // Two co-hosts on two separate USB headsets each need the monitor signal
+  // routed to their own physical output device — a single AudioContext can
+  // only default to one device, so this switches to a MediaStreamDestination
+  // fed into two <audio> elements, each pinned to a device via setSinkId.
+  if (mic2Check.checked) setupDualMonitor();
+
   startMeterLoop();
 }
 
+function meterLevel(an, buf) {
+  if (!an) return 0;
+  an.getByteTimeDomainData(buf);
+  let peak = 0;
+  for (let i = 0; i < buf.length; i++) {
+    peak = Math.max(peak, Math.abs(buf[i] - 128));
+  }
+  return Math.min(100, (peak / 128) * 100 * 2.5);
+}
+
+const LAMP_THRESHOLD = 8; // % level considered "live sound", not just noise floor
+
 function startMeterLoop() {
-  const data = new Uint8Array(analyser.frequencyBinCount);
+  const buf1 = new Uint8Array(micAnalyser.frequencyBinCount);
+  const buf2 = new Uint8Array(mic2Analyser.frequencyBinCount);
   const tick = () => {
-    analyser.getByteTimeDomainData(data);
-    let peak = 0;
-    for (let i = 0; i < data.length; i++) {
-      peak = Math.max(peak, Math.abs(data[i] - 128));
-    }
-    meterBar.style.width = Math.min(100, (peak / 128) * 100 * 2.5) + '%';
+    const level1 = meterLevel(micAnalyser, buf1);
+    meterBar.style.width = level1 + '%';
+    lamp1.classList.toggle('on', level1 > LAMP_THRESHOLD);
+
+    const level2 = meterLevel(mic2Analyser, buf2);
+    meter2Bar.style.width = level2 + '%';
+    lamp2.classList.toggle('on', level2 > LAMP_THRESHOLD);
+
     meterRAF = requestAnimationFrame(tick);
   };
   tick();
 }
+
+// Routes the self-monitor signal to two independently-chosen output devices
+// instead of AudioContext's single default destination.
+function setupDualMonitor() {
+  if (!audioCtx || !monitorGain) return;
+  if (!monitorDest) {
+    monitorDest = audioCtx.createMediaStreamDestination();
+    monitorGain.connect(monitorDest);
+  }
+  try {
+    monitorGain.disconnect(audioCtx.destination);
+  } catch {
+    // already disconnected — fine
+  }
+  monitorAudio1.srcObject = monitorDest.stream;
+  monitorAudio2.srcObject = monitorDest.stream;
+  monitorAudio1.play().catch(() => {});
+  monitorAudio2.play().catch(() => {});
+  applyOutputDevice(monitorAudio1, output1Select.value);
+  applyOutputDevice(monitorAudio2, output2Select.value);
+}
+
+function teardownDualMonitor() {
+  if (monitorDest && monitorGain) {
+    try {
+      monitorGain.disconnect(monitorDest);
+    } catch {
+      // already disconnected — fine
+    }
+  }
+  monitorDest = null;
+  monitorAudio1.pause();
+  monitorAudio1.srcObject = null;
+  monitorAudio2.pause();
+  monitorAudio2.srcObject = null;
+  if (audioCtx && monitorGain) monitorGain.connect(audioCtx.destination);
+}
+
+async function applyOutputDevice(audioEl, deviceId) {
+  if (typeof audioEl.setSinkId !== 'function') {
+    errorEl.textContent = 'Ο browser δεν υποστηρίζει επιλογή συσκευής εξόδου (δοκίμασε Chrome ή Edge).';
+    return;
+  }
+  try {
+    await audioEl.setSinkId(deviceId || '');
+  } catch (err) {
+    errorEl.textContent = 'Πρόβλημα με τη συσκευή εξόδου: ' + err.message;
+  }
+}
+
+output1Select.addEventListener('change', () => applyOutputDevice(monitorAudio1, output1Select.value));
+output2Select.addEventListener('change', () => applyOutputDevice(monitorAudio2, output2Select.value));
 
 // Single crossfader instead of two independent volume sliders: 0 = full
 // mic(s), 100 = full music, 50 = equal-power blend of both (cos/sin instead
@@ -131,7 +218,17 @@ function attachMic(newStream) {
   if (!micGainNode) micGainNode = audioCtx.createGain();
   micSourceNode.connect(micGainNode);
   micGainNode.connect(limiter);
+  micGainNode.connect(micAnalyser);
   updateMixGains();
+}
+
+function detachMic1() {
+  if (micSourceNode) micSourceNode.disconnect();
+  if (micGainNode) micGainNode.disconnect();
+  micSourceNode = null;
+  micGainNode = null;
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+  stream = null;
 }
 
 // Second co-host's mic — same laptop, a different physical input device
@@ -144,6 +241,7 @@ function attachMic2(newStream) {
   if (!mic2GainNode) mic2GainNode = audioCtx.createGain();
   mic2SourceNode.connect(mic2GainNode);
   mic2GainNode.connect(limiter);
+  mic2GainNode.connect(mic2Analyser);
   updateMixGains();
 }
 
@@ -158,7 +256,13 @@ function detachMic2() {
 
 mic2Check.addEventListener('change', () => {
   mic2Wrap.style.display = mic2Check.checked ? 'block' : 'none';
-  if (!mic2Check.checked) detachMic2();
+  if (mic2Check.checked) {
+    ensureAudioGraph();
+    setupDualMonitor();
+  } else {
+    detachMic2();
+    teardownDualMonitor();
+  }
 });
 
 async function attachSysAudio() {
@@ -233,21 +337,25 @@ document.addEventListener('keydown', (e) => {
   setMuted(!isMuted);
 });
 
+function fillDeviceSelects(selects, devices, fallbackLabel) {
+  selects.forEach((select) => {
+    const prevValue = select.value;
+    select.innerHTML = '<option value="">(προεπιλογή συστήματος)</option>';
+    devices.forEach((d, i) => {
+      const opt = document.createElement('option');
+      opt.value = d.deviceId;
+      opt.textContent = d.label || `${fallbackLabel} ${i + 1}`;
+      select.appendChild(opt);
+    });
+    if (devices.some((d) => d.deviceId === prevValue)) select.value = prevValue;
+  });
+}
+
 async function listMicrophones() {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const mics = devices.filter((d) => d.kind === 'audioinput');
-    [micSelect, mic2Select].forEach((select) => {
-      const prevValue = select.value;
-      select.innerHTML = '<option value="">(προεπιλογή συστήματος)</option>';
-      mics.forEach((d, i) => {
-        const opt = document.createElement('option');
-        opt.value = d.deviceId;
-        opt.textContent = d.label || `Μικρόφωνο ${i + 1}`;
-        select.appendChild(opt);
-      });
-      if (mics.some((d) => d.deviceId === prevValue)) select.value = prevValue;
-    });
+    fillDeviceSelects([micSelect, mic2Select], devices.filter((d) => d.kind === 'audioinput'), 'Μικρόφωνο');
+    fillDeviceSelects([output1Select, output2Select], devices.filter((d) => d.kind === 'audiooutput'), 'Έξοδος');
   } catch {
     // enumerateDevices can fail before permission is granted on some browsers — ignore, list refreshes after getUserMedia.
   }
@@ -314,16 +422,31 @@ async function applyMic2() {
   }
 }
 
+// Testing one mic at a time (not both together) avoids one mic picking up
+// the other person's test speech, and keeps it clear whose lamp/meter is
+// whose. Both co-hosts still hear whichever mic is being tested, through
+// their own headphones, via the shared monitor bus.
 testBtn.addEventListener('click', async () => {
   errorEl.textContent = '';
   try {
-    if (stream) stream.getTracks().forEach((t) => t.stop());
+    detachMic2();
     stream = await acquireStream(micSelect);
     attachMic(stream);
-    await applyMic2();
     updateMonitor();
   } catch (err) {
-    errorEl.textContent = 'Δεν δόθηκε πρόσβαση στο μικρόφωνο: ' + err.message;
+    errorEl.textContent = 'Δεν δόθηκε πρόσβαση στο μικρόφωνο 1: ' + err.message;
+  }
+});
+
+test2Btn.addEventListener('click', async () => {
+  errorEl.textContent = '';
+  try {
+    detachMic1();
+    mic2Stream = await acquireStream(mic2Select);
+    attachMic2(mic2Stream);
+    updateMonitor();
+  } catch (err) {
+    errorEl.textContent = 'Δεν δόθηκε πρόσβαση στο μικρόφωνο 2: ' + err.message;
   }
 });
 
@@ -445,6 +568,7 @@ function cleanup() {
   detachMic2(); // stops mic 2's tracks too; leaves the checkbox as-is so it auto-reconnects next broadcast
   detachSysAudio();
   sysAudioCheck.checked = false;
+  teardownDualMonitor();
   if (ws) ws.close();
 
   if (meterRAF) cancelAnimationFrame(meterRAF);
@@ -452,12 +576,17 @@ function cleanup() {
   if (audioCtx) audioCtx.close().catch(() => {});
   audioCtx = null;
   mixDest = null;
-  analyser = null;
+  micAnalyser = null;
+  mic2Analyser = null;
   monitorGain = null;
+  monitorDest = null;
   limiter = null;
   micSourceNode = null;
   micGainNode = null;
   meterBar.style.width = '0%';
+  meter2Bar.style.width = '0%';
+  lamp1.classList.remove('on');
+  lamp2.classList.remove('on');
 
   if (elapsedTimer) clearInterval(elapsedTimer);
   if (statsTimer) clearInterval(statsTimer);
