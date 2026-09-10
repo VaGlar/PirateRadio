@@ -34,3 +34,13 @@ jobs:
       - name: Deploy
         working-directory: icecast
         run: flyctl deploy --remote-only
+
+      - name: Scale to exactly one machine
+        working-directory: icecast
+        # Fly.io can end up with more than one machine (leftovers from
+        # earlier deploys/config changes). A second, non-running machine
+        # makes internal DNS (pirateradio-icecast.internal) intermittently
+        # resolve to a dead instance, causing "Connection refused" for the
+        # bridge. This is a single-mount radio server — it only ever needs
+        # one.
+        run: flyctl scale count 1 --app pirateradio-icecast --yes

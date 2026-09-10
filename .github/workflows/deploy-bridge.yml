@@ -34,3 +34,7 @@ jobs:
       - name: Deploy
         working-directory: bridge
         run: flyctl deploy --remote-only
+
+      - name: Scale to exactly one machine
+        working-directory: bridge
+        run: flyctl scale count 1 --app pirateradio-bridge --yes
