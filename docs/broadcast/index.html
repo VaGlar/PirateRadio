@@ -130,7 +130,54 @@
   .checkRow input { width: auto; margin: 0; accent-color: var(--gold); }
   #mixSliderWrap { display: none; margin-top: 10px; }
   #mixSliderWrap .labels { display: flex; justify-content: space-between; font-size: 0.74rem; color: var(--muted); }
-  input[type="range"] { width: 100%; margin: 2px 0 6px; accent-color: var(--gold); }
+  #mixSliderWrap .labels #mixReadout { color: var(--gold); font-weight: 600; }
+
+  /* Bigger track + thumb than the browser default — the tiny native thumb
+     is an easy-to-miss target, especially with a trackpad, which is what
+     made the slider feel "stuck" (you were clicking next to the thumb, not
+     on it, so no drag ever started). */
+  input[type="range"] {
+    width: 100%;
+    height: 34px;
+    margin: 2px 0 6px;
+    padding: 0;
+    accent-color: var(--gold);
+    cursor: pointer;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 10px;
+    border-radius: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: 3px solid #1c1917;
+    margin-top: -11px;
+    cursor: grab;
+  }
+  input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; }
+  input[type="range"]::-moz-range-track {
+    height: 10px;
+    border-radius: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: 3px solid #1c1917;
+    cursor: grab;
+  }
 
   #liveStats { display: none; }
   #liveStats .row { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 4px 0; }
@@ -235,7 +282,7 @@
           <label for="sysAudioCheck" style="margin:0">🎵 Spotify</label>
         </div>
         <div id="mixSliderWrap">
-          <div class="labels"><span>🎤 Μικρόφωνο</span><span>🎵 Μουσική</span></div>
+          <div class="labels"><span>🎤 Μικρόφωνο</span><span id="mixReadout">50 / 50</span><span>🎵 Μουσική</span></div>
           <input id="mixSlider" type="range" min="0" max="100" step="1" value="50" />
         </div>
         <div class="checkRow">

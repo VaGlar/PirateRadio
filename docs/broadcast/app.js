@@ -230,12 +230,16 @@ output2Select.addEventListener('change', () => applyOutputDevice(monitorAudio2, 
 // move together against the music. Mic stays at full volume regardless of
 // the slider until music is actually attached — there's nothing to fade
 // against yet.
+const mixReadoutEl = document.getElementById('mixReadout');
+
 function updateMixGains() {
-  const pos = Number(mixSliderEl.value) / 100;
+  const raw = Number(mixSliderEl.value);
+  const pos = raw / 100;
   const micLevel = sysGainNode ? Math.cos((pos * Math.PI) / 2) : 1;
   if (micGainNode) micGainNode.gain.value = micLevel;
   if (mic2GainNode) mic2GainNode.gain.value = micLevel;
   if (sysGainNode) sysGainNode.gain.value = Math.sin((pos * Math.PI) / 2);
+  mixReadoutEl.textContent = `${100 - raw} / ${raw}`;
 }
 mixSliderEl.addEventListener('input', updateMixGains);
 
