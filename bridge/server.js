@@ -43,11 +43,16 @@ function openIcecastRequest(ws) {
       'Ice-Name': 'Pirate Radio',
     },
   });
-  // Icecast's source protocol expects a raw byte stream, not an HTTP
-  // chunked body — without this Node wraps every write() in chunk-size
-  // framing (since there's no Content-Length for a live stream), which
-  // corrupts the audio.
-  req.useChunkedEncodingByDefault = false;
+  // Icecast's source protocol expects a raw byte stream when we talk to it
+  // directly (no Content-Length, no chunk framing) — without this Node
+  // wraps every write() in HTTP chunk-size markers that Icecast doesn't
+  // decode, corrupting the audio. This only applies to a direct connection
+  // (local docker-compose); going through Render's public HTTPS edge, the
+  // proxy in front of Icecast expects standard, well-formed HTTP and
+  // handles unchunking itself before forwarding upstream.
+  if (transport === http) {
+    req.useChunkedEncodingByDefault = false;
+  }
   req.on('error', (err) => {
     console.error('Icecast connection error:', err.message);
     ws.send(JSON.stringify({ type: 'error', message: 'Icecast connection failed: ' + err.message }));
