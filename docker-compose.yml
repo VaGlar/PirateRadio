@@ -1,0 +1,9 @@
+services:
+  icecast:
+    image: moul/icecast:latest
+    container_name: pirateradio-icecast
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./icecast.xml:/etc/icecast2/icecast.xml:ro
