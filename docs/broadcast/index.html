@@ -80,7 +80,6 @@
   .meterRow { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; }
   .meterRow .meterWrap { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; height: 14px; overflow: hidden; }
   .meterRow .meterBar { background: var(--gold); height: 100%; width: 0%; transition: width 60ms linear; }
-  .meterHint { font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; }
 
   .lamp {
     flex: 0 0 auto;
@@ -235,8 +234,6 @@
           <div class="meterWrap"><div id="meterBar" class="meterBar"></div></div>
           <div id="lamp1" class="lamp" title="Μικρόφωνο 1"></div>
         </div>
-        <div class="meterHint">Μίλησε δυνατά — η μπάρα και το λαμπάκι πρέπει να κινούνται.</div>
-
         <div id="output1Wrap" style="display:none">
           <label for="output1Select">🔈 Έξοδος (ακουστικά) — Άτομο 1</label>
           <select id="output1Select"><option value="">(προεπιλογή συστήματος)</option></select>
@@ -260,13 +257,8 @@
             <div class="meterWrap"><div id="meter2Bar" class="meterBar"></div></div>
             <div id="lamp2" class="lamp" title="Μικρόφωνο 2"></div>
           </div>
-          <div class="meterHint">Όσο δοκιμάζεις ένα μικρόφωνο, το άλλο κλείνει αυτόματα — ακούγεστε και οι δύο κανονικά στα ακουστικά σας.</div>
-
           <label for="output2Select">🔈 Έξοδος (ακουστικά) — Άτομο 2</label>
           <select id="output2Select"><option value="">(προεπιλογή συστήματος)</option></select>
-          <div id="outputHint" style="font-size:0.78rem; color: var(--muted); margin-top:-6px;">
-            Διάλεξε ρητά διαφορετική συσκευή για τον καθένα, αλλιώς και οι δύο θα πάνε στην ίδια προεπιλεγμένη — ο ένας από τους δύο δεν θα ακούει τίποτα στο "Άκου τον εαυτό σου".
-          </div>
         </div>
       </div>
     </div>
