@@ -6,8 +6,15 @@ const testBtn = document.getElementById('testBtn');
 const micSelect = document.getElementById('micSelect');
 const meterBar = document.getElementById('meterBar');
 const setupEl = document.getElementById('setup');
+const setup2El = document.getElementById('setup2');
 const statusEl = document.getElementById('status');
 const errorEl = document.getElementById('error');
+const monitorToggle = document.getElementById('monitorToggle');
+const monitorAudio = document.getElementById('monitorAudio');
+const liveStatsEl = document.getElementById('liveStats');
+const elapsedEl = document.getElementById('elapsed');
+const listenerCountEl = document.getElementById('listenerCount');
+const peakCountEl = document.getElementById('peakCount');
 
 let ws = null;
 let mediaRecorder = null;
@@ -15,6 +22,10 @@ let stream = null;
 let audioCtx = null;
 let analyser = null;
 let meterRAF = null;
+let onAirAt = 0;
+let elapsedTimer = null;
+let statsTimer = null;
+let peakListeners = 0;
 
 async function listMicrophones() {
   try {
@@ -71,12 +82,49 @@ function stopMeter() {
   meterBar.style.width = '0%';
 }
 
+function updateMonitor() {
+  if (monitorToggle.checked && stream) {
+    monitorAudio.srcObject = stream;
+    monitorAudio.muted = false;
+    monitorAudio.play().catch(() => {});
+  } else {
+    monitorAudio.pause();
+    monitorAudio.srcObject = null;
+  }
+}
+monitorToggle.addEventListener('change', updateMonitor);
+
+function formatElapsed(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const m = String(Math.floor(totalSec / 60)).padStart(2, '0');
+  const s = String(totalSec % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+async function pollStats() {
+  const url = document.getElementById('icecastStatusUrl').value.trim();
+  if (!url) return;
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    const data = await res.json();
+    const sources = [].concat(data?.icestats?.source ?? []);
+    const listeners = sources.reduce((sum, s) => sum + (s.listeners || 0), 0);
+    const peak = sources.reduce((sum, s) => sum + (s.listener_peak || 0), 0);
+    listenerCountEl.textContent = listeners;
+    peakListeners = Math.max(peakListeners, peak, listeners);
+    peakCountEl.textContent = peakListeners;
+  } catch {
+    listenerCountEl.textContent = '?';
+  }
+}
+
 testBtn.addEventListener('click', async () => {
   errorEl.textContent = '';
   try {
     if (stream) stream.getTracks().forEach((t) => t.stop());
     stream = await acquireStream();
     startMeter(stream);
+    updateMonitor();
   } catch (err) {
     errorEl.textContent = 'Δεν δόθηκε πρόσβαση στο μικρόφωνο: ' + err.message;
   }
@@ -135,11 +183,22 @@ startBtn.addEventListener('click', async () => {
 
 function goLive() {
   setupEl.style.display = 'none';
+  setup2El.style.display = 'none';
   stopBtn.style.display = 'inline-block';
   statusEl.textContent = '🔴 ON AIR';
   statusEl.className = 'live';
 
   startMeter(stream); // keep the meter running while live too, as a sanity check
+  updateMonitor();
+
+  onAirAt = Date.now();
+  peakListeners = 0;
+  liveStatsEl.style.display = 'block';
+  elapsedTimer = setInterval(() => {
+    elapsedEl.textContent = formatElapsed(Date.now() - onAirAt);
+  }, 1000);
+  pollStats();
+  statsTimer = setInterval(pollStats, 5000);
 
   mediaRecorder = new MediaRecorder(stream, { mimeType: MIME_TYPE });
   mediaRecorder.ondataavailable = async (event) => {
@@ -156,11 +215,19 @@ function cleanup() {
   if (stream) stream.getTracks().forEach((t) => t.stop());
   if (ws) ws.close();
   stopMeter();
+  monitorAudio.pause();
+  monitorAudio.srcObject = null;
+  if (elapsedTimer) clearInterval(elapsedTimer);
+  if (statsTimer) clearInterval(statsTimer);
+  elapsedTimer = null;
+  statsTimer = null;
   mediaRecorder = null;
   stream = null;
   ws = null;
   setupEl.style.display = 'block';
+  setup2El.style.display = 'block';
   stopBtn.style.display = 'none';
+  liveStatsEl.style.display = 'none';
   statusEl.textContent = 'Off air';
   statusEl.className = 'off';
 }

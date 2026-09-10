@@ -10,7 +10,7 @@
   input { width: 100%; padding: 10px; font-size: 1rem; margin: 12px 0; box-sizing: border-box; }
   button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border: none; border-radius: 6px; }
   #startBtn { background: #16a34a; color: white; }
-  #stopBtn { background: #dc2626; color: white; }
+  #stopBtn { background: #dc2626; color: white; width: 100%; }
   #status { margin-top: 20px; font-weight: bold; }
   .live { color: #dc2626; }
   .off { color: #6b7280; }
@@ -21,6 +21,12 @@
   #meterWrap { background: #e5e7eb; border-radius: 6px; height: 14px; overflow: hidden; margin: 8px 0 4px; }
   #meterBar { background: #16a34a; height: 100%; width: 0%; transition: width 60ms linear; }
   #meterHint { font-size: 0.8rem; color: #6b7280; }
+  #monitorRow { display: flex; align-items: center; gap: 8px; text-align: left; margin: 14px 0; font-size: 0.9rem; }
+  #monitorRow input { width: auto; margin: 0; }
+  #monitorWarn { font-size: 0.78rem; color: #b45309; text-align: left; margin-top: -8px; margin-bottom: 10px; }
+  #liveStats { display: none; margin-top: 18px; padding: 14px; background: #f3f4f6; border-radius: 8px; }
+  #liveStats .row { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 3px 0; }
+  #liveStats .row b { font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -29,14 +35,24 @@
   <div id="setup">
     <input id="password" type="password" placeholder="Κωδικός εκπομπής" />
     <input id="bridgeUrl" type="text" placeholder="wss://bridge-host" value="wss://pirateradio-bridge.fly.dev" />
+    <input id="icecastStatusUrl" type="text" placeholder="https://icecast-host/status-json.xsl" value="https://pirateradio-icecast.fly.dev/status-json.xsl" />
 
     <label for="micSelect">Μικρόφωνο</label>
     <select id="micSelect"><option value="">(προεπιλογή συστήματος)</option></select>
 
     <button id="testBtn" type="button">🎤 Δοκιμή μικροφώνου</button>
-    <div id="meterWrap"><div id="meterBar"></div></div>
-    <div id="meterHint">Μίλησε δυνατά — η μπάρα πρέπει να κινείται. Αν μένει επίπεδη ενώ μιλάς, διάλεξε άλλο μικρόφωνο από πάνω ή έλεγξε τα system settings.</div>
+  </div>
 
+  <div id="meterWrap"><div id="meterBar"></div></div>
+  <div id="meterHint">Μίλησε δυνατά — η μπάρα πρέπει να κινείται. Αν μένει επίπεδη ενώ μιλάς, διάλεξε άλλο μικρόφωνο ή έλεγξε τα system settings.</div>
+
+  <div id="monitorRow">
+    <input id="monitorToggle" type="checkbox" />
+    <label for="monitorToggle" style="margin:0">🎧 Άκου τον εαυτό σου live</label>
+  </div>
+  <div id="monitorWarn">⚠️ Μόνο με ακουστικά/AirPods! Με ηχεία θα γίνει σφύριγμα (feedback).</div>
+
+  <div id="setup2">
     <button id="startBtn">🎙️ On Air</button>
   </div>
 
@@ -44,6 +60,14 @@
 
   <div id="status" class="off">Off air</div>
   <div id="error"></div>
+
+  <div id="liveStats">
+    <div class="row"><span>⏱️ Διάρκεια</span><b id="elapsed">00:00</b></div>
+    <div class="row"><span>🎧 Ακροατές τώρα</span><b id="listenerCount">—</b></div>
+    <div class="row"><span>📈 Peak ακροατές</span><b id="peakCount">—</b></div>
+  </div>
+
+  <audio id="monitorAudio" style="display:none"></audio>
 
   <script src="app.js"></script>
 </body>
