@@ -127,8 +127,18 @@
   <div id="setup" class="panel">
     <input id="password" type="password" placeholder="Κωδικός εκπομπής" />
 
-    <label for="micSelect">Μικρόφωνο</label>
+    <label for="micSelect">Μικρόφωνο 1</label>
     <select id="micSelect"><option value="">(προεπιλογή συστήματος)</option></select>
+
+    <div class="checkRow">
+      <input id="mic2Check" type="checkbox" />
+      <label for="mic2Check" style="margin:0">👥 Δεύτερο άτομο (2ο μικρόφωνο)</label>
+    </div>
+    <div id="mic2Wrap" style="display:none">
+      <label for="mic2Select">Μικρόφωνο 2</label>
+      <select id="mic2Select"><option value="">(προεπιλογή συστήματος)</option></select>
+    </div>
+
     <button id="testBtn" type="button">🎤 Δοκιμή μικροφώνου</button>
 
     <div id="meterWrap"><div id="meterBar"></div></div>

@@ -6,6 +6,9 @@ const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const testBtn = document.getElementById('testBtn');
 const micSelect = document.getElementById('micSelect');
+const mic2Check = document.getElementById('mic2Check');
+const mic2Wrap = document.getElementById('mic2Wrap');
+const mic2Select = document.getElementById('mic2Select');
 const meterBar = document.getElementById('meterBar');
 const setupEl = document.getElementById('setup');
 const statusEl = document.getElementById('status');
@@ -26,7 +29,8 @@ const mixSliderEl = document.getElementById('mixSlider');
 
 let ws = null;
 let mediaRecorder = null;
-let stream = null; // raw mic MediaStream (mute toggles tracks on this)
+let stream = null; // raw mic 1 MediaStream (mute toggles tracks on this)
+let mic2Stream = null; // raw mic 2 MediaStream — second co-host, same laptop
 let sysStream = null; // raw system/tab-audio MediaStream from getDisplayMedia
 
 let audioCtx = null;
@@ -36,6 +40,8 @@ let monitorGain = null;
 let limiter = null;
 let micSourceNode = null;
 let micGainNode = null;
+let mic2SourceNode = null;
+let mic2GainNode = null;
 let sysSourceNode = null;
 let sysGainNode = null;
 let meterRAF = null;
@@ -103,14 +109,17 @@ function startMeterLoop() {
 }
 
 // Single crossfader instead of two independent volume sliders: 0 = full
-// mic, 100 = full music, 50 = equal-power blend of both (cos/sin instead
+// mic(s), 100 = full music, 50 = equal-power blend of both (cos/sin instead
 // of a straight linear ramp so the perceived loudness stays roughly
-// constant across the slider instead of dipping in the middle). Mic stays
-// at full volume regardless of the slider until music is actually
-// attached — there's nothing to fade against yet.
+// constant across the slider instead of dipping in the middle). Both mics
+// move together against the music. Mic stays at full volume regardless of
+// the slider until music is actually attached — there's nothing to fade
+// against yet.
 function updateMixGains() {
   const pos = Number(mixSliderEl.value) / 100;
-  if (micGainNode) micGainNode.gain.value = sysGainNode ? Math.cos((pos * Math.PI) / 2) : 1;
+  const micLevel = sysGainNode ? Math.cos((pos * Math.PI) / 2) : 1;
+  if (micGainNode) micGainNode.gain.value = micLevel;
+  if (mic2GainNode) mic2GainNode.gain.value = micLevel;
   if (sysGainNode) sysGainNode.gain.value = Math.sin((pos * Math.PI) / 2);
 }
 mixSliderEl.addEventListener('input', updateMixGains);
@@ -124,6 +133,33 @@ function attachMic(newStream) {
   micGainNode.connect(limiter);
   updateMixGains();
 }
+
+// Second co-host's mic — same laptop, a different physical input device
+// (built-in + USB, two USB mics, etc.). Plain getUserMedia with a second
+// deviceId, no virtual audio driver needed at all.
+function attachMic2(newStream) {
+  ensureAudioGraph();
+  if (mic2SourceNode) mic2SourceNode.disconnect();
+  mic2SourceNode = audioCtx.createMediaStreamSource(newStream);
+  if (!mic2GainNode) mic2GainNode = audioCtx.createGain();
+  mic2SourceNode.connect(mic2GainNode);
+  mic2GainNode.connect(limiter);
+  updateMixGains();
+}
+
+function detachMic2() {
+  if (mic2SourceNode) mic2SourceNode.disconnect();
+  if (mic2GainNode) mic2GainNode.disconnect();
+  mic2SourceNode = null;
+  mic2GainNode = null;
+  if (mic2Stream) mic2Stream.getTracks().forEach((t) => t.stop());
+  mic2Stream = null;
+}
+
+mic2Check.addEventListener('change', () => {
+  mic2Wrap.style.display = mic2Check.checked ? 'block' : 'none';
+  if (!mic2Check.checked) detachMic2();
+});
 
 async function attachSysAudio() {
   const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
@@ -175,13 +211,14 @@ sysAudioCheck.addEventListener('change', async () => {
   }
 });
 
-// Mutes the mic only (system audio, if attached, keeps playing) by
-// disabling the track rather than stopping it — MediaRecorder keeps
+// Mutes both mics together (system audio, if attached, keeps playing) by
+// disabling the tracks rather than stopping them — MediaRecorder keeps
 // running and sends silence instead, so the connection to Icecast never
-// drops.
+// drops. One shared mute for both co-hosts, not independent per-person.
 function setMuted(muted) {
   isMuted = muted;
   if (stream) stream.getAudioTracks().forEach((t) => (t.enabled = !muted));
+  if (mic2Stream) mic2Stream.getAudioTracks().forEach((t) => (t.enabled = !muted));
   muteBtn.classList.toggle('lit', !muted);
   document.body.classList.toggle('muted-bg', muted);
 }
@@ -200,12 +237,16 @@ async function listMicrophones() {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const mics = devices.filter((d) => d.kind === 'audioinput');
-    micSelect.innerHTML = '<option value="">(προεπιλογή συστήματος)</option>';
-    mics.forEach((d, i) => {
-      const opt = document.createElement('option');
-      opt.value = d.deviceId;
-      opt.textContent = d.label || `Μικρόφωνο ${i + 1}`;
-      micSelect.appendChild(opt);
+    [micSelect, mic2Select].forEach((select) => {
+      const prevValue = select.value;
+      select.innerHTML = '<option value="">(προεπιλογή συστήματος)</option>';
+      mics.forEach((d, i) => {
+        const opt = document.createElement('option');
+        opt.value = d.deviceId;
+        opt.textContent = d.label || `Μικρόφωνο ${i + 1}`;
+        select.appendChild(opt);
+      });
+      if (mics.some((d) => d.deviceId === prevValue)) select.value = prevValue;
     });
   } catch {
     // enumerateDevices can fail before permission is granted on some browsers — ignore, list refreshes after getUserMedia.
@@ -214,8 +255,8 @@ async function listMicrophones() {
 listMicrophones();
 navigator.mediaDevices.addEventListener?.('devicechange', listMicrophones);
 
-async function acquireStream() {
-  const deviceId = micSelect.value;
+async function acquireStream(select) {
+  const deviceId = select.value;
   // echoCancellation/noiseSuppression/autoGainControl are meant for two-way
   // calls — they run real-time DSP on the mic signal that adds noticeable
   // latency (and can dull audio quality), unnecessary here since this is a
@@ -260,12 +301,26 @@ async function pollStats() {
   }
 }
 
+// Forces a fresh getUserMedia for mic 2 every time (test button and On Air
+// alike) — unlike mic 1 there's no "reuse if unchanged" optimization yet,
+// simplest to reason about.
+async function applyMic2() {
+  if (mic2Check.checked) {
+    if (mic2Stream) mic2Stream.getTracks().forEach((t) => t.stop());
+    mic2Stream = await acquireStream(mic2Select);
+    attachMic2(mic2Stream);
+  } else {
+    detachMic2();
+  }
+}
+
 testBtn.addEventListener('click', async () => {
   errorEl.textContent = '';
   try {
     if (stream) stream.getTracks().forEach((t) => t.stop());
-    stream = await acquireStream();
+    stream = await acquireStream(micSelect);
     attachMic(stream);
+    await applyMic2();
     updateMonitor();
   } catch (err) {
     errorEl.textContent = 'Δεν δόθηκε πρόσβαση στο μικρόφωνο: ' + err.message;
@@ -289,9 +344,10 @@ startBtn.addEventListener('click', async () => {
   try {
     // Reuse the stream from "Δοκιμή μικροφώνου" if it's already the selected device, otherwise (re)acquire it.
     if (!stream || stream.getAudioTracks().some((t) => t.readyState === 'ended')) {
-      stream = await acquireStream();
+      stream = await acquireStream(micSelect);
     }
     attachMic(stream);
+    await applyMic2();
   } catch (err) {
     errorEl.textContent = 'Δεν δόθηκε πρόσβαση στο μικρόφωνο: ' + err.message;
     return;
@@ -386,6 +442,7 @@ function goLive() {
 function cleanup() {
   if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
   if (stream) stream.getTracks().forEach((t) => t.stop());
+  detachMic2(); // stops mic 2's tracks too; leaves the checkbox as-is so it auto-reconnects next broadcast
   detachSysAudio();
   sysAudioCheck.checked = false;
   if (ws) ws.close();
