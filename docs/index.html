@@ -118,6 +118,9 @@
       0 0 34px #d9a441,
       0 0 55px #d9a441;
   }
+
+  #listenerCount { color: var(--muted); font-size: 0.85rem; margin: -14px 0 20px; }
+  #listenerCount b { color: var(--gold); font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -125,6 +128,7 @@
   <p class="tagline">Πάτησε play για να ακούσεις την εκπομπή.</p>
 
   <div id="onairSign"><span>ON AIR</span></div>
+  <div id="listenerCount">🎧 <b id="listenerCountValue">—</b> ακροατές</div>
 
   <div class="panel">
     <audio id="radioPlayer" preload="none" x-webkit-airplay="allow" src="https://pirateradio-icecast.fly.dev/radio.mp3">

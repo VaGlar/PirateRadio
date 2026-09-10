@@ -39,6 +39,8 @@ const hostName1El = document.getElementById('hostName1');
 const hostName2El = document.getElementById('hostName2');
 const liveLamp1 = document.getElementById('liveLamp1');
 const liveLamp2 = document.getElementById('liveLamp2');
+const hostMute1 = document.getElementById('hostMute1');
+const hostMute2 = document.getElementById('hostMute2');
 const setupEl = document.getElementById('setup');
 const statusEl = document.getElementById('status');
 const errorEl = document.getElementById('error');
@@ -415,14 +417,23 @@ sysAudioCheck.addEventListener('change', async () => {
   }
 });
 
-// Mutes both mics together (system audio, if attached, keeps playing) by
-// disabling the tracks rather than stopping them — MediaRecorder keeps
-// running and sends silence instead, so the connection to Icecast never
-// drops. One shared mute for both co-hosts, not independent per-person.
+// Two layers of mute: the big ON AIR button is a master mute for both mics
+// at once (ad breaks, "hold on a sec" for the whole show); the small button
+// next to each host's name mutes just that person's own mic, independent
+// of the other. Disabling tracks rather than stopping them either way —
+// MediaRecorder keeps running and sends silence instead, so the connection
+// to Icecast never drops.
+let mic1Muted = false;
+let mic2Muted = false;
+
+function applyMicEnabled() {
+  if (stream) stream.getAudioTracks().forEach((t) => (t.enabled = !isMuted && !mic1Muted));
+  if (mic2Stream) mic2Stream.getAudioTracks().forEach((t) => (t.enabled = !isMuted && !mic2Muted));
+}
+
 function setMuted(muted) {
   isMuted = muted;
-  if (stream) stream.getAudioTracks().forEach((t) => (t.enabled = !muted));
-  if (mic2Stream) mic2Stream.getAudioTracks().forEach((t) => (t.enabled = !muted));
+  applyMicEnabled();
   muteBtn.classList.toggle('lit', !muted);
   document.body.classList.toggle('muted-bg', muted);
 }
@@ -435,6 +446,19 @@ document.addEventListener('keydown', (e) => {
   if (!ws || ws.readyState !== WebSocket.OPEN) return; // only while actually on air
   e.preventDefault();
   setMuted(!isMuted);
+});
+
+hostMute1.addEventListener('click', () => {
+  mic1Muted = !mic1Muted;
+  applyMicEnabled();
+  hostMute1.classList.toggle('muted', mic1Muted);
+  hostMute1.textContent = mic1Muted ? '🔇' : '🎙️';
+});
+hostMute2.addEventListener('click', () => {
+  mic2Muted = !mic2Muted;
+  applyMicEnabled();
+  hostMute2.classList.toggle('muted', mic2Muted);
+  hostMute2.textContent = mic2Muted ? '🔇' : '🎙️';
 });
 
 function fillDeviceSelects(selects, devices, fallbackLabel) {
@@ -651,6 +675,12 @@ function goLive() {
   stopBtn.style.display = 'inline-block';
   muteBtn.style.display = 'block';
   liveControlsEl.style.display = 'block';
+  mic1Muted = false;
+  mic2Muted = false;
+  hostMute1.classList.remove('muted');
+  hostMute1.textContent = '🎙️';
+  hostMute2.classList.remove('muted');
+  hostMute2.textContent = '🎙️';
   setMuted(false);
   statusEl.textContent = 'Ζωντανά τώρα';
 

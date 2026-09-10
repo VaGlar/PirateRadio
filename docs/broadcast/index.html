@@ -197,7 +197,18 @@
 
   #hostsLive { display: none; }
   .hostRow { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; font-size: 0.92rem; }
-  .hostRow .lamp { margin-left: 10px; }
+  .hostControls { display: flex; align-items: center; gap: 10px; }
+  .hostMuteBtn {
+    width: auto;
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    font-size: 0.95rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+  }
+  .hostMuteBtn.muted { border-color: var(--red); background: rgba(207, 84, 84, 0.15); }
 
   #powerWarning {
     display: none;
@@ -274,8 +285,8 @@
   <div class="liveGrid">
     <div class="col">
       <div id="hostsLive" class="panel">
-        <div class="hostRow"><span id="hostName1">Παραγωγός 1</span><div id="liveLamp1" class="lamp"></div></div>
-        <div class="hostRow" id="hostRow2" style="display:none"><span id="hostName2">Παραγωγός 2</span><div id="liveLamp2" class="lamp"></div></div>
+        <div class="hostRow"><span id="hostName1">Παραγωγός 1</span><div class="hostControls"><button id="hostMute1" type="button" class="hostMuteBtn" title="Σίγαση μόνο αυτού">🎙️</button><div id="liveLamp1" class="lamp"></div></div></div>
+        <div class="hostRow" id="hostRow2" style="display:none"><span id="hostName2">Παραγωγός 2</span><div class="hostControls"><button id="hostMute2" type="button" class="hostMuteBtn" title="Σίγαση μόνο αυτού">🎙️</button><div id="liveLamp2" class="lamp"></div></div></div>
       </div>
 
       <div id="liveControls" class="panel">
