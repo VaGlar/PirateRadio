@@ -166,6 +166,9 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- ?v=N cache-busts app.js — phones (iOS Safari especially) can hold a
+       stale cached copy for a long time otherwise. Bump N whenever app.js
+       changes. -->
+  <script src="app.js?v=2"></script>
 </body>
 </html>

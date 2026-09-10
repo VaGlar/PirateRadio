@@ -364,6 +364,9 @@
   <audio id="monitorAudio1" style="display:none"></audio>
   <audio id="monitorAudio2" style="display:none"></audio>
 
-  <script src="app.js"></script>
+  <!-- ?v=N cache-busts app.js — phones (iOS Safari especially) can hold a
+       stale cached copy for a long time otherwise. Bump N whenever app.js
+       changes. -->
+  <script src="app.js?v=2"></script>
 </body>
 </html>
