@@ -34,6 +34,7 @@ let audioCtx = null;
 let mixDest = null; // MediaStreamAudioDestinationNode — MediaRecorder reads from mixDest.stream
 let analyser = null;
 let monitorGain = null;
+let limiter = null;
 let micSourceNode = null;
 let micGainNode = null;
 let sysSourceNode = null;
@@ -61,12 +62,28 @@ function ensureAudioGraph() {
   analyser = audioCtx.createAnalyser();
   analyser.fftSize = 512;
 
-  // Self-monitor destination. Mic always feeds it; system audio (if
-  // attached) does too — see attachSysAudio — so once you've muted the
-  // original source (e.g. muted the Chrome tab) this is the only place
-  // you hear it, and it's the exact mixed signal being broadcast.
+  // Mic + music summed together can exceed 0dB and clip — Web Audio just
+  // adds signals linearly with no automatic ceiling. Clipping is exactly
+  // what "πολύ πρίμα"/harsh-thin-distorted sound is: it chops the peaks
+  // off the waveform, which adds harsh high-frequency harmonics. A limiter
+  // on the combined signal keeps peaks under control instead.
+  limiter = audioCtx.createDynamicsCompressor();
+  limiter.threshold.value = -6;
+  limiter.knee.value = 6;
+  limiter.ratio.value = 20;
+  limiter.attack.value = 0.002;
+  limiter.release.value = 0.15;
+
+  limiter.connect(mixDest);
+  limiter.connect(analyser);
+
+  // Self-monitor destination. Mic always feeds it (via the limiter); system
+  // audio (if attached) does too — see attachSysAudio — so once you've
+  // muted the original source (e.g. muted the Chrome tab) this is the only
+  // place you hear it, and it's the exact mixed signal being broadcast.
   monitorGain = audioCtx.createGain();
   monitorGain.gain.value = monitorToggle.checked ? 1 : 0;
+  limiter.connect(monitorGain);
   monitorGain.connect(audioCtx.destination);
 
   startMeterLoop();
@@ -93,9 +110,7 @@ function attachMic(newStream) {
   if (!micGainNode) micGainNode = audioCtx.createGain();
   micGainNode.gain.value = Number(micVolumeEl.value);
   micSourceNode.connect(micGainNode);
-  micGainNode.connect(mixDest);
-  micGainNode.connect(analyser);
-  micGainNode.connect(monitorGain);
+  micGainNode.connect(limiter);
 }
 
 async function attachSysAudio() {
@@ -113,14 +128,7 @@ async function attachSysAudio() {
   sysGainNode = audioCtx.createGain();
   sysGainNode.gain.value = Number(sysVolumeEl.value);
   sysSourceNode.connect(sysGainNode);
-  sysGainNode.connect(mixDest);
-  sysGainNode.connect(analyser);
-  // Also feed the self-monitor now — once you've muted the source tab
-  // itself (Chrome keeps capturing a muted tab's audio, it just stops
-  // playing it locally), this is the only way you hear the music at all,
-  // and it's the same mixed signal being broadcast rather than a second
-  // copy of the original.
-  sysGainNode.connect(monitorGain);
+  sysGainNode.connect(limiter);
 
   audioTracks[0].addEventListener('ended', detachSysAudio); // browser's own "Stop sharing" bar
 }
@@ -381,6 +389,7 @@ function cleanup() {
   mixDest = null;
   analyser = null;
   monitorGain = null;
+  limiter = null;
   micSourceNode = null;
   micGainNode = null;
   meterBar.style.width = '0%';
