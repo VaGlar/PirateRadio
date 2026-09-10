@@ -35,6 +35,11 @@ function openIcecastRequest() {
       'Ice-Name': 'Pirate Radio',
     },
   });
+  // Icecast's source protocol expects a raw byte stream, not an HTTP
+  // chunked body — without this Node wraps every write() in chunk-size
+  // framing (since there's no Content-Length for a live stream), which
+  // corrupts the audio.
+  req.useChunkedEncodingByDefault = false;
   req.on('error', (err) => console.error('Icecast connection error:', err.message));
   req.on('response', (res) => {
     if (res.statusCode >= 400) {
