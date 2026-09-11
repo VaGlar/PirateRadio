@@ -71,7 +71,8 @@ laptop) — βλ. "Χαρακτηριστικά" παρακάτω.
   εξόδου (`setSinkId`).
 - Live στατιστικά (διάρκεια, ακροατές, peak) από το Icecast
   `/status-json.xsl`, live roster ονομάτων ακροατών από το bridge.
-- Inbox με μηνύματα ακροατών (one-way, δεν είναι δημόσιο chatroom).
+- Inbox με μηνύματα ακροατών (one-way, δεν είναι δημόσιο chatroom),
+  rate-limited στο bridge (token bucket: burst 5 μηνυμάτων, μετά 1 ανά 5").
 - Προβολή/αλλαγή του κοινού κωδικού εισόδου των ακροατών, ζωντανά, χωρίς
   redeploy (βλ. "Κωδικός ακροατών" παρακάτω).
 - Προειδοποίηση αν το laptop δεν φορτίζει (Battery Status API) — το
@@ -195,6 +196,5 @@ bridge URL `ws://localhost:3001`.
 - Live poll broadcaster→ακροατές — χρειάζεται το bridge να κρατάει λίστα
   ακροατών (μερικώς υπάρχει ήδη μέσω του roster) και νέο μηχανισμό
   broadcast-σε-όλους αντί για ένα-προς-ένα.
-- Rate-limit στο listener chat (δεν υπάρχει σήμερα κανένα φρένο).
 - Πραγματικό listener authentication στο Icecast, αν ποτέ χρειαστεί
   κάτι παραπάνω από το σημερινό courtesy lock.

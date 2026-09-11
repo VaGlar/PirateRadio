@@ -118,6 +118,18 @@ let listenerName = ''; // set once the login gate is passed — see bottom of fi
 function ensureConnection() {
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return ws;
   ws = new WebSocket(BRIDGE_URL);
+  // The bridge rate-limits chat (a few messages go through immediately,
+  // then one every few seconds) — surface that instead of the message
+  // silently vanishing.
+  ws.addEventListener('message', (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.type === 'chat-error') {
+      chatStatus.textContent = '⏳ ' + msg.message;
+      setTimeout(() => {
+        if (chatStatus.textContent === '⏳ ' + msg.message) chatStatus.textContent = '';
+      }, 4000);
+    }
+  });
   return ws;
 }
 

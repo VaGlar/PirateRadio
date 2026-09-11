@@ -37,6 +37,29 @@ function broadcastRoster() {
   activeBroadcaster.send(JSON.stringify({ type: 'listener-roster', names: [...listeners.values()] }));
 }
 
+// Token bucket for chat: burst of CHAT_BUCKET_CAPACITY messages go through
+// immediately, then one token refills every CHAT_REFILL_MS — so after the
+// burst it's one message per that interval, and staying quiet for a while
+// earns the burst back. Per-connection (per ws), not global, so one person
+// spamming doesn't rate-limit everyone else.
+const CHAT_BUCKET_CAPACITY = 5;
+const CHAT_REFILL_MS = 5000;
+
+function takeChatToken(bucket) {
+  const now = Date.now();
+  const elapsed = now - bucket.lastRefill;
+  if (elapsed > 0) {
+    const refill = Math.floor(elapsed / CHAT_REFILL_MS);
+    if (refill > 0) {
+      bucket.tokens = Math.min(CHAT_BUCKET_CAPACITY, bucket.tokens + refill);
+      bucket.lastRefill += refill * CHAT_REFILL_MS;
+    }
+  }
+  if (bucket.tokens <= 0) return false;
+  bucket.tokens -= 1;
+  return true;
+}
+
 // Browsers don't reliably play a live, indefinite-duration webm/opus stream
 // through a plain <audio> tag — MP3 over Icecast is the combination every
 // real internet radio setup relies on for that reason. ffmpeg both
@@ -85,6 +108,7 @@ wss.on('connection', (ws) => {
   let authed = false;
   let ffmpeg = null;
   const stats = { onAirAt: 0, totalBytes: 0, chunkCount: 0 };
+  const chatBucket = { tokens: CHAT_BUCKET_CAPACITY, lastRefill: Date.now() };
 
   ws.on('message', (data, isBinary) => {
     // This same WebSocket endpoint serves two very different clients: the
@@ -168,6 +192,10 @@ wss.on('connection', (ws) => {
         const name = String(msg.name || 'Ανώνυμος').slice(0, 40);
         const text = String(msg.message || '').trim().slice(0, 300);
         if (!text) return;
+        if (!takeChatToken(chatBucket)) {
+          ws.send(JSON.stringify({ type: 'chat-error', message: 'Πολλά μηνύματα — περίμενε λίγο.' }));
+          return;
+        }
         if (activeBroadcaster && activeBroadcaster.readyState === WebSocket.OPEN) {
           activeBroadcaster.send(JSON.stringify({ type: 'chat-message', name, message: text, ts: Date.now() }));
         }
