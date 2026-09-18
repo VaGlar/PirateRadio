@@ -609,24 +609,38 @@ function setMuted(muted) {
 }
 muteBtn.addEventListener('click', () => setMuted(!isMuted));
 
-document.addEventListener('keydown', (e) => {
-  if (e.code !== 'Space') return;
-  const tag = (e.target?.tagName || '').toLowerCase();
-  if (tag === 'input' || tag === 'select' || tag === 'textarea') return; // don't hijack typing
-  if (!ws || ws.readyState !== WebSocket.OPEN) return; // only while actually on air
-  e.preventDefault();
-  setMuted(!isMuted);
-});
-
-hostMute1.addEventListener('click', () => {
+function toggleHostMute1() {
   mic1Muted = !mic1Muted;
   applyMicEnabled();
   hostMute1.classList.toggle('live', !mic1Muted);
-});
-hostMute2.addEventListener('click', () => {
+}
+function toggleHostMute2() {
   mic2Muted = !mic2Muted;
   applyMicEnabled();
   hostMute2.classList.toggle('live', !mic2Muted);
+}
+hostMute1.addEventListener('click', toggleHostMute1);
+hostMute2.addEventListener('click', toggleHostMute2);
+
+// Space = master mute (everyone at once), 1/2 = mute just that host's own
+// mic — quicker than reaching for the mouse to hit the small rocker
+// switches, which matters more now that auto-ducking handles the overall
+// balance and per-person muting is the thing you actually reach for live.
+document.addEventListener('keydown', (e) => {
+  const tag = (e.target?.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'select' || tag === 'textarea') return; // don't hijack typing
+  if (!ws || ws.readyState !== WebSocket.OPEN) return; // only while actually on air
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    setMuted(!isMuted);
+  } else if (e.code === 'Digit1' || e.code === 'Numpad1') {
+    e.preventDefault();
+    toggleHostMute1();
+  } else if (e.code === 'Digit2' || e.code === 'Numpad2') {
+    e.preventDefault();
+    toggleHostMute2();
+  }
 });
 
 function fillDeviceSelects(selects, devices, fallbackLabel) {
