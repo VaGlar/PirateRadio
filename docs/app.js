@@ -12,6 +12,31 @@ radioPlayer.addEventListener('pause', () => { onairSign.classList.remove('lit');
 radioPlayer.addEventListener('ended', () => { onairSign.classList.remove('lit'); document.title = ORIGINAL_TITLE; });
 radioPlayer.addEventListener('error', () => { onairSign.classList.remove('lit'); document.title = ORIGINAL_TITLE; });
 
+// iOS (and other OSes) show a "Now Playing" card in Control Center/lock
+// screen for any playing <audio> — the Media Session API is what puts an
+// icon on it. Draws the pirate flag emoji onto a canvas for the artwork
+// image instead of needing a separate image file.
+if ('mediaSession' in navigator) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  ctx.font = '420px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🏴‍☠️', 256, 280);
+  const artworkUrl = canvas.toDataURL('image/png');
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: 'Pirate Radio',
+    artist: 'Ζωντανή εκπομπή',
+    artwork: [{ src: artworkUrl, sizes: '512x512', type: 'image/png' }],
+  });
+
+  radioPlayer.addEventListener('play', () => { navigator.mediaSession.playbackState = 'playing'; });
+  radioPlayer.addEventListener('pause', () => { navigator.mediaSession.playbackState = 'paused'; });
+}
+
 // Custom player bar (play/pause, reload, volume, mute, AirPlay) instead of
 // the native <audio controls> UI — the native one exposes a "..." overflow
 // menu with captions/playback-speed options that don't make sense for a
