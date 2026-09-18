@@ -380,9 +380,11 @@ const MUSIC_GAIN_SCALE = 0.6;
 // back up once you've been quiet for a bit. The crossfader still sets the
 // baseline mix when nobody's talking — ducking is a temporary multiplier
 // on top of that, not a replacement for it.
-const DUCK_THRESHOLD = 12; // mic meter % that counts as "talking" — slightly above LAMP_THRESHOLD's noise-floor cutoff
-const DUCK_AMOUNT = 0.3; // music drops to this fraction of its slider-set level while ducked
-const DUCK_HOLD_MS = 500; // stay ducked this long after speech stops, so brief pauses between words don't un-duck and re-duck
+// `let`, not `const` — adjustable live via the "Ρυθμίσεις ducking" sliders
+// below instead of being fixed values only I can change in code.
+let DUCK_THRESHOLD = 12; // mic meter % that counts as "talking" — slightly above LAMP_THRESHOLD's noise-floor cutoff
+let DUCK_AMOUNT = 0.3; // music drops to this fraction of its slider-set level while ducked
+let DUCK_HOLD_MS = 500; // stay ducked this long after speech stops, so brief pauses between words don't un-duck and re-duck
 const DUCK_ATTACK_SEC = 0.1; // fast duck-in, so music doesn't cover the start of a sentence
 const DUCK_RELEASE_SEC = 0.6; // slower duck-out, reads as a smooth recovery instead of a jump
 
@@ -416,11 +418,35 @@ function resetDuckState() {
   duckHoldTimer = null;
 }
 
+const duckSettingsWrap = document.getElementById('duckSettingsWrap');
+const duckThresholdSlider = document.getElementById('duckThresholdSlider');
+const duckThresholdValue = document.getElementById('duckThresholdValue');
+const duckAmountSlider = document.getElementById('duckAmountSlider');
+const duckAmountValue = document.getElementById('duckAmountValue');
+const duckHoldSlider = document.getElementById('duckHoldSlider');
+const duckHoldValue = document.getElementById('duckHoldValue');
+
 duckToggle.addEventListener('change', () => {
+  duckSettingsWrap.style.display = duckToggle.checked ? 'block' : 'none';
   if (!duckToggle.checked) {
     resetDuckState();
     applyMusicGain();
   }
+});
+
+duckThresholdSlider.addEventListener('input', () => {
+  DUCK_THRESHOLD = Number(duckThresholdSlider.value);
+  duckThresholdValue.textContent = DUCK_THRESHOLD;
+});
+duckAmountSlider.addEventListener('input', () => {
+  const percent = Number(duckAmountSlider.value);
+  DUCK_AMOUNT = percent / 100;
+  duckAmountValue.textContent = percent + '%';
+  if (duckActive) applyMusicGain(); // live preview while dragging, if currently ducked
+});
+duckHoldSlider.addEventListener('input', () => {
+  DUCK_HOLD_MS = Number(duckHoldSlider.value);
+  duckHoldValue.textContent = (DUCK_HOLD_MS / 1000).toFixed(1) + 's';
 });
 
 // Drive the slider directly from pointer position instead of relying on the

@@ -349,6 +349,14 @@
             <input id="duckToggle" type="checkbox" />
             <label for="duckToggle" style="margin:0">🎚️ Αυτόματο χαμήλωμα μουσικής όταν μιλάω</label>
           </div>
+          <div id="duckSettingsWrap" style="display:none">
+            <label for="duckThresholdSlider">Ευαισθησία (πόσο δυνατά πρέπει να μιλήσεις) — <span id="duckThresholdValue">12</span></label>
+            <input id="duckThresholdSlider" type="range" min="5" max="30" step="1" value="12" />
+            <label for="duckAmountSlider">Πόσο χαμηλώνει η μουσική — <span id="duckAmountValue">30%</span></label>
+            <input id="duckAmountSlider" type="range" min="10" max="70" step="5" value="30" />
+            <label for="duckHoldSlider">Καθυστέρηση πριν ξανανέβει — <span id="duckHoldValue">0.5s</span></label>
+            <input id="duckHoldSlider" type="range" min="200" max="1500" step="100" value="500" />
+          </div>
         </div>
       </div>
 
@@ -382,6 +390,6 @@
   <!-- ?v=N cache-busts app.js — phones (iOS Safari especially) can hold a
        stale cached copy for a long time otherwise. Bump N whenever app.js
        changes. -->
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
