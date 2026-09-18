@@ -125,13 +125,17 @@ const sysAudioCheck = document.getElementById('sysAudioCheck');
 const mixSliderWrap = document.getElementById('mixSliderWrap');
 const mixSettingsToggleBtn = document.getElementById('mixSettingsToggleBtn');
 const mixSettingsPanel = document.getElementById('mixSettingsPanel');
+const micVolumeWrap = document.getElementById('micVolumeWrap');
 const micVolumeSlider = document.getElementById('micVolumeSlider');
 const micVolumeValue = document.getElementById('micVolumeValue');
 const liveMeterBar1 = document.getElementById('liveMeterBar1');
 const liveMeterRow2 = document.getElementById('liveMeterRow2');
 const liveMeterBar2 = document.getElementById('liveMeterBar2');
+const musicVolumeWrap = document.getElementById('musicVolumeWrap');
 const musicVolumeSlider = document.getElementById('musicVolumeSlider');
 const musicVolumeValue = document.getElementById('musicVolumeValue');
+const crossfaderWrap = document.getElementById('crossfaderWrap');
+const mixSliderEl = document.getElementById('mixSlider');
 const duckToggle = document.getElementById('duckToggle');
 
 // Collapsed by default — with two mics this panel is tall enough to be
@@ -361,13 +365,15 @@ async function applyOutputDevice(audioEl, deviceId) {
 output1Select.addEventListener('change', () => applyOutputDevice(monitorAudio1, output1Select.value));
 output2Select.addEventListener('change', () => applyOutputDevice(monitorAudio2, output2Select.value));
 
-// Single crossfader instead of two independent volume sliders: 0 = full
-// mic(s), 100 = full music, 50 = equal-power blend of both (cos/sin instead
-// of a straight linear ramp so the perceived loudness stays roughly
-// constant across the slider instead of dipping in the middle). Both mics
-// move together against the music. Mic stays at full volume regardless of
-// the slider until music is actually attached — there's nothing to fade
-// against yet.
+// Two controls for the mic/music balance, depending on whether auto-ducking
+// is on: independent mic + music sliders while ducking handles the
+// talk-over-music balancing automatically, or — with ducking off — the
+// classic single crossfader (0 = full mic(s), 100 = full music, 50 =
+// equal-power blend, cos/sin instead of a straight linear ramp so the
+// perceived loudness stays roughly constant across the slider instead of
+// dipping in the middle). Both mics move together against the music either
+// way. Mic stays at full volume regardless of either control until music is
+// actually attached — there's nothing to fade against yet.
 // Ramp instead of snapping the gain instantly — this matters most now that
 // clicking anywhere on the slider can jump it a long way in one go (see
 // below): without a ramp that would be an abrupt, audible cut/pop in the
@@ -410,18 +416,30 @@ const DUCK_RELEASE_SEC = 0.6; // slower duck-out, reads as a smooth recovery ins
 let duckActive = false;
 let duckHoldTimer = null;
 
-// Mic stays at full volume (independent of the slider) until music is
+// Mic stays at full volume (independent of either control) until music is
 // actually attached — there's nothing to balance against yet.
 function applyMicGain() {
-  const level = sysGainNode ? (Number(micVolumeSlider.value) / 100) * MIC_MAKEUP_GAIN : 1;
+  if (!sysGainNode) {
+    rampGain(micGainNode, 1);
+    rampGain(mic2GainNode, 1);
+    return;
+  }
+  const level = duckToggle.checked
+    ? (Number(micVolumeSlider.value) / 100) * MIC_MAKEUP_GAIN
+    : Math.cos((Number(mixSliderEl.value) / 100) * Math.PI / 2) * MIC_MAKEUP_GAIN;
   rampGain(micGainNode, level);
   rampGain(mic2GainNode, level);
 }
 
 function applyMusicGain() {
   if (!sysGainNode) return;
-  let target = (Number(musicVolumeSlider.value) / 100) * MUSIC_GAIN_SCALE;
-  if (duckToggle.checked && duckActive) target *= DUCK_AMOUNT;
+  let target;
+  if (duckToggle.checked) {
+    target = (Number(musicVolumeSlider.value) / 100) * MUSIC_GAIN_SCALE;
+    if (duckActive) target *= DUCK_AMOUNT;
+  } else {
+    target = Math.sin((Number(mixSliderEl.value) / 100) * Math.PI / 2) * MUSIC_GAIN_SCALE;
+  }
   rampGain(sysGainNode, target, duckActive ? DUCK_ATTACK_SEC : DUCK_RELEASE_SEC);
 }
 
@@ -458,6 +476,26 @@ function wireVolumeSlider(el, valueEl, onChange) {
 wireVolumeSlider(micVolumeSlider, micVolumeValue, applyMicGain);
 wireVolumeSlider(musicVolumeSlider, musicVolumeValue, applyMusicGain);
 
+// Classic crossfader (shown instead of the independent sliders above when
+// auto-ducking is off) — same press-anywhere-and-drag behavior, but moves
+// mic and music together from one control since there's no ducking to
+// handle the talk-over-music balance automatically.
+function setMixFromClientX(clientX) {
+  const rect = mixSliderEl.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+  mixSliderEl.value = String(Math.round(pct));
+  updateMixGains();
+}
+mixSliderEl.addEventListener('input', updateMixGains);
+mixSliderEl.addEventListener('pointerdown', (e) => {
+  mixSliderEl.setPointerCapture(e.pointerId);
+  setMixFromClientX(e.clientX);
+});
+mixSliderEl.addEventListener('pointermove', (e) => {
+  if (e.buttons !== 1) return;
+  setMixFromClientX(e.clientX);
+});
+
 function resetDuckState() {
   duckActive = false;
   if (duckHoldTimer) clearTimeout(duckHoldTimer);
@@ -474,10 +512,11 @@ const duckHoldValue = document.getElementById('duckHoldValue');
 
 duckToggle.addEventListener('change', () => {
   duckSettingsWrap.style.display = duckToggle.checked ? 'block' : 'none';
-  if (!duckToggle.checked) {
-    resetDuckState();
-    applyMusicGain();
-  }
+  micVolumeWrap.style.display = duckToggle.checked ? 'block' : 'none';
+  musicVolumeWrap.style.display = duckToggle.checked ? 'block' : 'none';
+  crossfaderWrap.style.display = duckToggle.checked ? 'none' : 'block';
+  resetDuckState();
+  updateMixGains();
 });
 
 duckThresholdSlider.addEventListener('input', () => {

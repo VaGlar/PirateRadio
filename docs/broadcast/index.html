@@ -349,13 +349,23 @@
         <div id="mixSliderWrap">
           <button id="mixSettingsToggleBtn" type="button" style="width:auto; padding:6px 10px; font-size:0.82rem; background:var(--bg); border:1px solid var(--border); color:var(--text);">⚙️ Ρυθμίσεις μείξης</button>
           <div id="mixSettingsPanel" style="display:none">
-            <label for="micVolumeSlider">🎤 Ένταση μικροφώνου — <span id="micVolumeValue">70%</span></label>
-            <input id="micVolumeSlider" type="range" min="0" max="100" step="5" value="70" />
+            <div id="micVolumeWrap">
+              <label for="micVolumeSlider">🎤 Ένταση μικροφώνου — <span id="micVolumeValue">70%</span></label>
+              <input id="micVolumeSlider" type="range" min="0" max="100" step="5" value="70" />
+            </div>
             <div class="meterRow"><div class="meterWrap"><div id="liveMeterBar1" class="meterBar"></div></div></div>
             <div class="meterRow" id="liveMeterRow2" style="display:none"><div class="meterWrap"><div id="liveMeterBar2" class="meterBar"></div></div></div>
 
-            <label for="musicVolumeSlider">🎵 Ένταση μουσικής — <span id="musicVolumeValue">70%</span></label>
-            <input id="musicVolumeSlider" type="range" min="0" max="100" step="5" value="70" />
+            <div id="musicVolumeWrap">
+              <label for="musicVolumeSlider">🎵 Ένταση μουσικής — <span id="musicVolumeValue">70%</span></label>
+              <input id="musicVolumeSlider" type="range" min="0" max="100" step="5" value="70" />
+            </div>
+
+            <div id="crossfaderWrap" style="display:none">
+              <div style="display:flex; justify-content:space-between; font-size:0.74rem; color:var(--muted)"><span>🎤 Μικρόφωνο</span><span>🎵 Μουσική</span></div>
+              <input id="mixSlider" type="range" min="0" max="100" step="1" value="50" />
+            </div>
+
             <div class="checkRow">
               <input id="duckToggle" type="checkbox" checked />
               <label for="duckToggle" style="margin:0">🎚️ Αυτόματη μείωση μουσικής κατά την ομιλία</label>
@@ -402,6 +412,6 @@
   <!-- ?v=N cache-busts app.js — phones (iOS Safari especially) can hold a
        stale cached copy for a long time otherwise. Bump N whenever app.js
        changes. -->
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
