@@ -189,8 +189,17 @@
   #liveStats .row b { font-variant-numeric: tabular-nums; color: var(--gold); }
   #inbox { display: none; }
   #inbox h3 { font-size: 0.95rem; color: var(--muted); font-weight: 600; margin: 0 0 10px; }
-  #inboxList { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
-  #inboxList .msg { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; }
+  /* flex:1 alone has no real ceiling — with nothing capping it, the box
+     (and the whole page) just kept growing taller as messages piled up
+     instead of scrolling internally. max-height with clamp() gives it an
+     actual bound that scales with the screen, same idea as the listener
+     page's chat list. */
+  #inboxList { overflow-y: auto; overflow-x: hidden; max-height: clamp(180px, 45vh, 500px); display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+  /* Flex items default to min-width:auto, which lets a long unbroken
+     string (a pasted URL, no spaces) force the item — and the whole
+     inbox — wider instead of wrapping. min-width:0 + overflow-wrap let
+     it actually wrap instead of pushing out a horizontal scrollbar. */
+  #inboxList .msg { min-width: 0; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; }
   #inboxList .msg .name { font-weight: bold; color: var(--gold); }
   #inboxList .msg .time { float: right; color: var(--muted); font-size: 0.75rem; }
   #inboxEmpty { color: var(--muted); font-size: 0.85rem; }
