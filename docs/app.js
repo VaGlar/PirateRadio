@@ -116,6 +116,11 @@ const chatListEl = document.getElementById('chatList');
 let ws = null;
 let listenerName = ''; // set once the login gate is passed — see bottom of file
 
+// Tracks the message currently in flight so we know, when the bridge
+// echoes it back (or rejects it), whether that's the one we're waiting on
+// — see sendMessage() / the 'chat-message' handler below.
+let pendingSend = null; // { name, text } or null
+
 // The bridge fans every chat message out to the broadcaster AND every
 // logged-in listener — this is a shared chat, not a one-way inbox to the
 // broadcaster — so this renders it the same way for everyone, sender
@@ -148,10 +153,26 @@ function ensureConnection() {
     const msg = JSON.parse(event.data);
     if (msg.type === 'chat-message') {
       addChatMessage(msg);
+      // Only clear the compose box once this specific message is actually
+      // confirmed sent (the bridge echoes it back to the sender too) —
+      // not optimistically on send, so a rate-limited message doesn't
+      // vanish from the box before it's actually gone through.
+      if (pendingSend && msg.name === pendingSend.name && msg.message === pendingSend.text) {
+        pendingSend = null;
+        chatMessage.value = '';
+        chatSend.disabled = false;
+        chatStatus.textContent = '✅ Στάλθηκε!';
+        setTimeout(() => {
+          if (chatStatus.textContent === '✅ Στάλθηκε!') chatStatus.textContent = '';
+        }, 3000);
+      }
     } else if (msg.type === 'chat-error') {
       // The bridge rate-limits chat (a few messages go through immediately,
-      // then one every few seconds) — surface that instead of the message
-      // silently vanishing.
+      // then one every few seconds). Leave whatever's typed in the box —
+      // it never went out — so the person doesn't have to retype it, just
+      // wait and hit send again.
+      pendingSend = null;
+      chatSend.disabled = false;
       chatStatus.textContent = '⏳ ' + msg.message;
       setTimeout(() => {
         if (chatStatus.textContent === '⏳ ' + msg.message) chatStatus.textContent = '';
@@ -167,15 +188,11 @@ function sendMessage() {
 
   chatSend.disabled = true;
   const socket = ensureConnection();
+  const name = chatName.value.trim() || 'Ανώνυμος';
 
   const doSend = () => {
-    socket.send(JSON.stringify({ type: 'chat', name: chatName.value.trim(), message: text }));
-    chatMessage.value = '';
-    chatStatus.textContent = '✅ Στάλθηκε!';
-    chatSend.disabled = false;
-    setTimeout(() => {
-      if (chatStatus.textContent === '✅ Στάλθηκε!') chatStatus.textContent = '';
-    }, 3000);
+    pendingSend = { name, text };
+    socket.send(JSON.stringify({ type: 'chat', name, message: text }));
   };
 
   if (socket.readyState === WebSocket.OPEN) {
