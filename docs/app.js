@@ -14,86 +14,14 @@ radioPlayer.addEventListener('error', () => { onairSign.classList.remove('lit');
 
 // iOS (and other OSes) show a "Now Playing" card in Control Center/lock
 // screen for any playing <audio> — the Media Session API is what puts an
-// icon on it. Drawn by hand with canvas paths instead of rendering the 🏴‍☠️
-// emoji — canvas text doesn't reliably apply the ZWJ ligature that joins
-// the flag+skull into one glyph (it can fall back to two separate glyphs,
-// landing off-center), and a transparent background gets backfilled white
-// by iOS's card — drawing shapes on a solid dark background sidesteps both.
+// icon on it. Uses the actual Jolly Roger image (assets/pirate-flag.png,
+// square-cropped) instead of drawing one — a real photographed/textured
+// flag reads better than a flat vector icon at this size.
 if ('mediaSession' in navigator) {
-  const size = 512;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-
-  ctx.fillStyle = '#0d0b0a';
-  ctx.fillRect(0, 0, size, size);
-
-  const cx = size / 2;
-  const cy = size / 2;
-  ctx.fillStyle = '#f2ece2';
-
-  // Crossbones
-  ctx.strokeStyle = '#f2ece2';
-  ctx.lineWidth = 28;
-  ctx.lineCap = 'round';
-  [Math.PI / 4, -Math.PI / 4].forEach((angle) => {
-    ctx.save();
-    ctx.translate(cx, cy + 110);
-    ctx.rotate(angle);
-    ctx.beginPath();
-    ctx.moveTo(-150, 0);
-    ctx.lineTo(150, 0);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(-150, 0, 22, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(150, 0, 22, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  });
-
-  // Skull dome + jaw
-  ctx.beginPath();
-  ctx.arc(cx, cy - 40, 120, Math.PI, 0);
-  ctx.lineTo(cx + 120, cy + 30);
-  ctx.quadraticCurveTo(cx + 120, cy + 80, cx + 70, cy + 80);
-  ctx.lineTo(cx + 70, cy + 110);
-  ctx.lineTo(cx - 70, cy + 110);
-  ctx.lineTo(cx - 70, cy + 80);
-  ctx.quadraticCurveTo(cx - 120, cy + 80, cx - 120, cy + 30);
-  ctx.closePath();
-  ctx.fill();
-
-  // Eye sockets
-  ctx.fillStyle = '#0d0b0a';
-  ctx.beginPath();
-  ctx.ellipse(cx - 48, cy - 30, 30, 40, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(cx + 48, cy - 30, 30, 40, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Nose
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - 5);
-  ctx.lineTo(cx - 20, cy + 35);
-  ctx.lineTo(cx + 20, cy + 35);
-  ctx.closePath();
-  ctx.fill();
-
-  // Teeth gaps
-  for (let i = -1.5; i <= 1.5; i++) {
-    ctx.fillRect(cx + i * 22 - 5, cy + 80, 10, 30);
-  }
-
-  const artworkUrl = canvas.toDataURL('image/png');
-
   navigator.mediaSession.metadata = new MediaMetadata({
     title: 'Pirate Radio',
     artist: 'Ζωντανή εκπομπή',
-    artwork: [{ src: artworkUrl, sizes: '512x512', type: 'image/png' }],
+    artwork: [{ src: 'assets/pirate-flag.png', sizes: '512x512', type: 'image/png' }],
   });
 
   radioPlayer.addEventListener('play', () => { navigator.mediaSession.playbackState = 'playing'; });
