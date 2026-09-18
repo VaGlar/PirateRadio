@@ -395,7 +395,7 @@ function rampGain(node, target, duration = MIX_RAMP_SEC) {
 // slider "100%" wouldn't actually sound balanced. These multipliers only
 // kick in once music is actually attached — solo mic broadcasts are
 // unaffected. Starting values; nudge them if the balance still feels off.
-const MIC_MAKEUP_GAIN = 2.0;
+const MIC_MAKEUP_GAIN = 2.5;
 const MUSIC_GAIN_SCALE = 0.6;
 
 // Auto-ducking: instead of having to manually manage the mic/music balance
