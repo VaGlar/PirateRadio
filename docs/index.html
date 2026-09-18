@@ -87,8 +87,14 @@
   button:hover { filter: brightness(1.08); }
 
   #chatBox { margin-top: 26px; text-align: left; }
-  #chatBox h2 { font-size: 0.9rem; font-weight: 600; color: var(--muted); text-align: center; margin: 0 0 4px; }
+  #chatBox h2 { font-size: 0.9rem; font-weight: 600; color: var(--muted); text-align: center; margin: 0 0 10px; }
   #chatStatus { font-size: 0.8rem; color: var(--muted); text-align: center; min-height: 1.2em; margin-top: 6px; }
+
+  #chatList { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  #chatList .msg { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; }
+  #chatList .msg .name { font-weight: bold; color: var(--gold); }
+  #chatList .msg .time { float: right; color: var(--muted); font-size: 0.75rem; }
+  #chatEmpty { color: var(--muted); font-size: 0.85rem; }
 
   /* Neon "ON AIR" sign — dim/unlit until the listener actually presses play. */
   #onairSign {
@@ -157,7 +163,8 @@
       </div>
 
       <div id="chatBox">
-        <h2>📨 Στείλε μήνυμα στην εκπομπή</h2>
+        <h2>💬 Chat εκπομπής</h2>
+        <div id="chatList"><div id="chatEmpty">Κανένα μήνυμα ακόμα.</div></div>
         <input id="chatName" type="text" placeholder="Το όνομά σου (προαιρετικό)" maxlength="40" />
         <textarea id="chatMessage" rows="2" placeholder="Μήνυμα..." maxlength="300"></textarea>
         <button id="chatSend" type="button">Αποστολή</button>
@@ -169,6 +176,6 @@
   <!-- ?v=N cache-busts app.js — phones (iOS Safari especially) can hold a
        stale cached copy for a long time otherwise. Bump N whenever app.js
        changes. -->
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

@@ -113,9 +113,9 @@ wss.on('connection', (ws) => {
   ws.on('message', (data, isBinary) => {
     // This same WebSocket endpoint serves two very different clients: the
     // one broadcaster (sends binary audio after authenticating) and any
-    // number of listeners (send text "chat" messages, no auth needed —
-    // it's a one-way inbox to whoever is currently on air, not a public
-    // chatroom).
+    // number of listeners (send text "chat" messages after logging in —
+    // see 'listener-login'). Chat is shared: the bridge fans each message
+    // out to the broadcaster and every logged-in listener.
     if (!isBinary) {
       let msg;
       try {
@@ -196,8 +196,15 @@ wss.on('connection', (ws) => {
           ws.send(JSON.stringify({ type: 'chat-error', message: 'Πολλά μηνύματα — περίμενε λίγο.' }));
           return;
         }
+        // Shared chat, not a one-way inbox to the broadcaster — fans out to
+        // the broadcaster AND every logged-in listener, sender included (so
+        // their own message shows up in the shared log too).
+        const payload = JSON.stringify({ type: 'chat-message', name, message: text, ts: Date.now() });
         if (activeBroadcaster && activeBroadcaster.readyState === WebSocket.OPEN) {
-          activeBroadcaster.send(JSON.stringify({ type: 'chat-message', name, message: text, ts: Date.now() }));
+          activeBroadcaster.send(payload);
+        }
+        for (const listenerWs of listeners.keys()) {
+          if (listenerWs.readyState === WebSocket.OPEN) listenerWs.send(payload);
         }
         return;
       }

@@ -111,19 +111,47 @@ const chatName = document.getElementById('chatName');
 const chatMessage = document.getElementById('chatMessage');
 const chatSend = document.getElementById('chatSend');
 const chatStatus = document.getElementById('chatStatus');
+const chatListEl = document.getElementById('chatList');
 
 let ws = null;
 let listenerName = ''; // set once the login gate is passed — see bottom of file
 
+// The bridge fans every chat message out to the broadcaster AND every
+// logged-in listener — this is a shared chat, not a one-way inbox to the
+// broadcaster — so this renders it the same way for everyone, sender
+// included (confirms the message actually went through).
+function addChatMessage(msg) {
+  const empty = document.getElementById('chatEmpty');
+  if (empty) empty.remove();
+
+  const el = document.createElement('div');
+  el.className = 'msg';
+  const time = new Date(msg.ts || Date.now()).toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
+  const name = document.createElement('span');
+  name.className = 'name';
+  name.textContent = (msg.name || 'Ανώνυμος') + ': ';
+  const timeEl = document.createElement('span');
+  timeEl.className = 'time';
+  timeEl.textContent = time;
+  el.appendChild(name);
+  el.appendChild(document.createTextNode(msg.message || ''));
+  el.appendChild(timeEl);
+
+  chatListEl.appendChild(el);
+  chatListEl.scrollTop = chatListEl.scrollHeight;
+}
+
 function ensureConnection() {
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return ws;
   ws = new WebSocket(BRIDGE_URL);
-  // The bridge rate-limits chat (a few messages go through immediately,
-  // then one every few seconds) — surface that instead of the message
-  // silently vanishing.
   ws.addEventListener('message', (event) => {
     const msg = JSON.parse(event.data);
-    if (msg.type === 'chat-error') {
+    if (msg.type === 'chat-message') {
+      addChatMessage(msg);
+    } else if (msg.type === 'chat-error') {
+      // The bridge rate-limits chat (a few messages go through immediately,
+      // then one every few seconds) — surface that instead of the message
+      // silently vanishing.
       chatStatus.textContent = '⏳ ' + msg.message;
       setTimeout(() => {
         if (chatStatus.textContent === '⏳ ' + msg.message) chatStatus.textContent = '';

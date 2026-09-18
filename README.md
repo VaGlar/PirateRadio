@@ -71,8 +71,7 @@ laptop) — βλ. "Χαρακτηριστικά" παρακάτω.
   εξόδου (`setSinkId`).
 - Live στατιστικά (διάρκεια, ακροατές, peak) από το Icecast
   `/status-json.xsl`, live roster ονομάτων ακροατών από το bridge.
-- Inbox με μηνύματα ακροατών (one-way, δεν είναι δημόσιο chatroom),
-  rate-limited στο bridge (token bucket: burst 5 μηνυμάτων, μετά 1 ανά 5").
+- Inbox με μηνύματα ακροατών, ορατό στον broadcaster.
 - Προβολή/αλλαγή του κοινού κωδικού εισόδου των ακροατών, ζωντανά, χωρίς
   redeploy (βλ. "Κωδικός ακροατών" παρακάτω).
 - Προειδοποίηση αν το laptop δεν φορτίζει (Battery Status API) — το
@@ -89,6 +88,9 @@ laptop) — βλ. "Χαρακτηριστικά" παρακάτω.
   αντί για τα native controls του browser.
 - Auto-reconnect αν κοπεί το stream, live αριθμός ακροατών, neon "ON AIR"
   sign που ανάβει όταν παίζει ήχος.
+- Κοινό chat: κάθε μήνυμα φαίνεται σε όλους (broadcaster + όλους τους
+  ακροατές), όχι μόνο στον broadcaster. Rate-limited στο bridge (token
+  bucket: burst 5 μηνυμάτων, μετά 1 ανά 5").
 
 ### Κωδικός ακροατών
 
