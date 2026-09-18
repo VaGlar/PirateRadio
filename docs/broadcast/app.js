@@ -164,7 +164,9 @@ let micAnalyser = null; // per-mic meters/lamps, tapped before the mix so each s
 let mic2Analyser = null;
 let monitorGain = null;
 let monitorDest = null; // only created when 2 co-hosts need separate monitor outputs
-let limiter = null;
+let micLimiter = null; // dedicated to the summed mic signal, so voice peaks don't duck the music
+let musicLimiter = null; // dedicated to music, so it keeps its own dynamics instead of reacting to mic peaks
+let masterLimiter = null; // final safety net on the combined signal, rarely engaged
 let micDeEsser = null; // dips the "s"/"sh" sibilance band before the limiter
 let mic2DeEsser = null;
 let micSourceNode = null;
@@ -203,23 +205,41 @@ function ensureAudioGraph() {
   mic2Analyser = audioCtx.createAnalyser();
   mic2Analyser.fftSize = 512;
 
-  // Mic + music summed together can exceed 0dB and clip — Web Audio just
-  // adds signals linearly with no automatic ceiling. Clipping is exactly
-  // what "πολύ πρίμα"/harsh-thin-distorted sound is: it chops the peaks
-  // off the waveform, which adds harsh high-frequency harmonics. A limiter
-  // on the combined signal keeps peaks under control instead.
-  // Kept close to 0dB/high-ratio (a true peak limiter, not general
-  // compression) — an earlier, more aggressive setting (-6dB/20:1) reacted
-  // to ordinary loud song passages, not just real peaks, which read as the
-  // music's volume audibly pumping up and down even with no one talking.
-  limiter = audioCtx.createDynamicsCompressor();
-  limiter.threshold.value = -3;
-  limiter.knee.value = 3;
-  limiter.ratio.value = 10;
-  limiter.attack.value = 0.003;
-  limiter.release.value = 0.25;
+  // Separate limiters for mic and music instead of one shared limiter on
+  // the combined signal — a shared limiter means a loud mic peak also
+  // ducks the music (and vice versa), which is exactly the "volume pumping
+  // up and down" that a single aggressive shared setting (-6dB/20:1) caused
+  // even with nobody talking. Each source now controls its own dynamics
+  // independently, so music keeps its own natural loudness variation
+  // instead of reacting to the mic. A final masterLimiter on the *combined*
+  // signal is still needed as a safety net — Web Audio sums signals
+  // linearly with no ceiling, so mic+music together can still exceed 0dB
+  // and clip even when neither one does alone — but it's set close to 0dB
+  // so it only ever catches true peaks, not everyday loud passages.
+  micLimiter = audioCtx.createDynamicsCompressor();
+  micLimiter.threshold.value = -3;
+  micLimiter.knee.value = 3;
+  micLimiter.ratio.value = 10;
+  micLimiter.attack.value = 0.003;
+  micLimiter.release.value = 0.25;
 
-  // The limiter's fast 2ms attack (needed to catch clipping peaks) also
+  musicLimiter = audioCtx.createDynamicsCompressor();
+  musicLimiter.threshold.value = -3;
+  musicLimiter.knee.value = 3;
+  musicLimiter.ratio.value = 10;
+  musicLimiter.attack.value = 0.003;
+  musicLimiter.release.value = 0.25;
+
+  masterLimiter = audioCtx.createDynamicsCompressor();
+  masterLimiter.threshold.value = -1;
+  masterLimiter.knee.value = 1;
+  masterLimiter.ratio.value = 20;
+  masterLimiter.attack.value = 0.003;
+  masterLimiter.release.value = 0.1;
+  micLimiter.connect(masterLimiter);
+  musicLimiter.connect(masterLimiter);
+
+  // micLimiter's fast attack (needed to catch clipping peaks) also
   // emphasizes sibilance — harsh "s"/"sh" hiss — since those are exactly
   // the fast, high-frequency transients it reacts hardest to. A static
   // dip in the sibilant band, before the limiter sees the signal, tames
@@ -237,15 +257,16 @@ function ensureAudioGraph() {
   mic2DeEsser.Q.value = 1.4;
   mic2DeEsser.gain.value = -8;
 
-  limiter.connect(mixDest);
+  masterLimiter.connect(mixDest);
 
-  // Self-monitor destination. Mic always feeds it (via the limiter); system
-  // audio (if attached) does too — see attachSysAudio — so once you've
-  // muted the original source (e.g. muted the Chrome tab) this is the only
-  // place you hear it, and it's the exact mixed signal being broadcast.
+  // Self-monitor destination. Mic always feeds it (via masterLimiter);
+  // system audio (if attached) does too — see attachSysAudio — so once
+  // you've muted the original source (e.g. muted the Chrome tab) this is
+  // the only place you hear it, and it's the exact mixed signal being
+  // broadcast.
   monitorGain = audioCtx.createGain();
   monitorGain.gain.value = monitorToggle.checked ? 1 : 0;
-  limiter.connect(monitorGain);
+  masterLimiter.connect(monitorGain);
   monitorGain.connect(audioCtx.destination);
 
   // Two co-hosts on two separate USB headsets each need the monitor signal
@@ -545,7 +566,7 @@ function attachMic(newStream) {
   if (!micGainNode) micGainNode = audioCtx.createGain();
   micSourceNode.connect(micGainNode);
   micGainNode.connect(micDeEsser);
-  micDeEsser.connect(limiter);
+  micDeEsser.connect(micLimiter);
   micGainNode.connect(micAnalyser);
   updateMixGains();
 }
@@ -569,7 +590,7 @@ function attachMic2(newStream) {
   if (!mic2GainNode) mic2GainNode = audioCtx.createGain();
   mic2SourceNode.connect(mic2GainNode);
   mic2GainNode.connect(mic2DeEsser);
-  mic2DeEsser.connect(limiter);
+  mic2DeEsser.connect(micLimiter);
   mic2GainNode.connect(mic2Analyser);
   updateMixGains();
 }
@@ -609,7 +630,7 @@ async function attachSysAudio() {
   sysSourceNode = audioCtx.createMediaStreamSource(sysStream);
   sysGainNode = audioCtx.createGain();
   sysSourceNode.connect(sysGainNode);
-  sysGainNode.connect(limiter);
+  sysGainNode.connect(musicLimiter);
   updateMixGains();
 
   audioTracks[0].addEventListener('ended', () => {
@@ -1069,7 +1090,9 @@ function cleanup() {
   mic2Analyser = null;
   monitorGain = null;
   monitorDest = null;
-  limiter = null;
+  micLimiter = null;
+  musicLimiter = null;
+  masterLimiter = null;
   micDeEsser = null;
   mic2DeEsser = null;
   micSourceNode = null;
