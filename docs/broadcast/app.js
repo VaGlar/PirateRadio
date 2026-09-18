@@ -123,11 +123,22 @@ const inboxEl = document.getElementById('inbox');
 const inboxListEl = document.getElementById('inboxList');
 const sysAudioCheck = document.getElementById('sysAudioCheck');
 const mixSliderWrap = document.getElementById('mixSliderWrap');
+const mixSettingsToggleBtn = document.getElementById('mixSettingsToggleBtn');
+const mixSettingsPanel = document.getElementById('mixSettingsPanel');
 const micVolumeSlider = document.getElementById('micVolumeSlider');
 const micVolumeValue = document.getElementById('micVolumeValue');
+const liveMeterBar1 = document.getElementById('liveMeterBar1');
+const liveMeterRow2 = document.getElementById('liveMeterRow2');
+const liveMeterBar2 = document.getElementById('liveMeterBar2');
 const musicVolumeSlider = document.getElementById('musicVolumeSlider');
 const musicVolumeValue = document.getElementById('musicVolumeValue');
 const duckToggle = document.getElementById('duckToggle');
+
+// Collapsed by default — with two mics this panel is tall enough to be
+// worth opening on demand instead of always eating screen space.
+mixSettingsToggleBtn.addEventListener('click', () => {
+  mixSettingsPanel.style.display = mixSettingsPanel.style.display === 'none' ? 'block' : 'none';
+});
 const output1Select = document.getElementById('output1Select');
 const output2Select = document.getElementById('output2Select');
 const monitorAudio1 = document.getElementById('monitorAudio1');
@@ -258,6 +269,8 @@ function startMeterLoop() {
     const level1 = meterLevel(micAnalyser, buf1);
     meterBar.style.width = level1 + '%';
     meterBar.classList.toggle('clip', level1 > CLIP_THRESHOLD);
+    liveMeterBar1.style.width = level1 + '%';
+    liveMeterBar1.classList.toggle('clip', level1 > CLIP_THRESHOLD);
     const on1 = level1 > LAMP_THRESHOLD;
     lamp1.classList.toggle('on', on1);
     liveLamp1.classList.toggle('on', on1);
@@ -265,6 +278,8 @@ function startMeterLoop() {
     const level2 = meterLevel(mic2Analyser, buf2);
     meter2Bar.style.width = level2 + '%';
     meter2Bar.classList.toggle('clip', level2 > CLIP_THRESHOLD);
+    liveMeterBar2.style.width = level2 + '%';
+    liveMeterBar2.classList.toggle('clip', level2 > CLIP_THRESHOLD);
     const on2 = level2 > LAMP_THRESHOLD;
     lamp2.classList.toggle('on', on2);
     liveLamp2.classList.toggle('on', on2);
@@ -386,8 +401,8 @@ const MUSIC_GAIN_SCALE = 0.6;
 // this is the normal way to run the mix now, not an opt-in extra.
 // `let`, not `const` — adjustable live via the "Ρυθμίσεις ducking" sliders
 // below instead of being fixed values only I can change in code.
-let DUCK_THRESHOLD = 12; // mic meter % that counts as "talking" — slightly above LAMP_THRESHOLD's noise-floor cutoff
-let DUCK_AMOUNT = 0.3; // music drops to this fraction of its slider-set level while ducked
+let DUCK_THRESHOLD = 10; // mic meter % that counts as "talking" — slightly above LAMP_THRESHOLD's noise-floor cutoff
+let DUCK_AMOUNT = 0.1; // music drops to this fraction of its slider-set level while ducked
 let DUCK_HOLD_MS = 500; // stay ducked this long after speech stops, so brief pauses between words don't un-duck and re-duck
 const DUCK_ATTACK_SEC = 0.1; // fast duck-in, so music doesn't cover the start of a sentence
 const DUCK_RELEASE_SEC = 0.6; // slower duck-out, reads as a smooth recovery instead of a jump
@@ -912,6 +927,7 @@ function goLive() {
 
   hostName1El.textContent = name1Input.value.trim() || 'Παραγωγός 1';
   hostRow2El.style.display = mic2Check.checked ? 'flex' : 'none';
+  liveMeterRow2.style.display = mic2Check.checked ? 'flex' : 'none';
   if (mic2Check.checked) hostName2El.textContent = name2Input.value.trim() || 'Παραγωγός 2';
   hostsLiveEl.style.display = 'block';
 
@@ -1039,6 +1055,7 @@ function cleanup() {
   liveStatsEl.style.display = 'none';
   rosterWrapEl.style.display = 'none';
   rosterNamesEl.textContent = '';
+  mixSettingsPanel.style.display = 'none'; // collapsed again for next time
   inboxEl.style.display = 'none';
   statusEl.textContent = 'Off air';
 }

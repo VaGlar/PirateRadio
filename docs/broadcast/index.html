@@ -347,21 +347,27 @@
           </div>
         </div>
         <div id="mixSliderWrap">
-          <label for="micVolumeSlider">🎤 Ένταση μικροφώνου — <span id="micVolumeValue">100%</span></label>
-          <input id="micVolumeSlider" type="range" min="0" max="100" step="5" value="100" />
-          <label for="musicVolumeSlider">🎵 Ένταση μουσικής — <span id="musicVolumeValue">100%</span></label>
-          <input id="musicVolumeSlider" type="range" min="0" max="100" step="5" value="100" />
-          <div class="checkRow">
-            <input id="duckToggle" type="checkbox" checked />
-            <label for="duckToggle" style="margin:0">🎚️ Αυτόματη μείωση μουσικής κατά την ομιλία</label>
-          </div>
-          <div id="duckSettingsWrap">
-            <label for="duckThresholdSlider">Ευαισθησία (πόσο δυνατά πρέπει να μιλήσεις) — <span id="duckThresholdValue">12</span></label>
-            <input id="duckThresholdSlider" type="range" min="5" max="30" step="1" value="12" />
-            <label for="duckAmountSlider">Πόσο χαμηλώνει η μουσική — <span id="duckAmountValue">30%</span></label>
-            <input id="duckAmountSlider" type="range" min="10" max="70" step="5" value="30" />
-            <label for="duckHoldSlider">Καθυστέρηση πριν ξανανέβει — <span id="duckHoldValue">0.5s</span></label>
-            <input id="duckHoldSlider" type="range" min="200" max="1500" step="100" value="500" />
+          <button id="mixSettingsToggleBtn" type="button" style="width:auto; padding:6px 10px; font-size:0.82rem; background:var(--bg); border:1px solid var(--border); color:var(--text);">⚙️ Ρυθμίσεις μείξης</button>
+          <div id="mixSettingsPanel" style="display:none">
+            <label for="micVolumeSlider">🎤 Ένταση μικροφώνου — <span id="micVolumeValue">70%</span></label>
+            <input id="micVolumeSlider" type="range" min="0" max="100" step="5" value="70" />
+            <div class="meterRow"><div class="meterWrap"><div id="liveMeterBar1" class="meterBar"></div></div></div>
+            <div class="meterRow" id="liveMeterRow2" style="display:none"><div class="meterWrap"><div id="liveMeterBar2" class="meterBar"></div></div></div>
+
+            <label for="musicVolumeSlider">🎵 Ένταση μουσικής — <span id="musicVolumeValue">70%</span></label>
+            <input id="musicVolumeSlider" type="range" min="0" max="100" step="5" value="70" />
+            <div class="checkRow">
+              <input id="duckToggle" type="checkbox" checked />
+              <label for="duckToggle" style="margin:0">🎚️ Αυτόματη μείωση μουσικής κατά την ομιλία</label>
+            </div>
+            <div id="duckSettingsWrap">
+              <label for="duckThresholdSlider">Ευαισθησία (πόσο δυνατά πρέπει να μιλήσεις) — <span id="duckThresholdValue">10</span></label>
+              <input id="duckThresholdSlider" type="range" min="5" max="30" step="1" value="10" />
+              <label for="duckAmountSlider">Πόσο χαμηλώνει η μουσική — <span id="duckAmountValue">10%</span></label>
+              <input id="duckAmountSlider" type="range" min="10" max="70" step="5" value="10" />
+              <label for="duckHoldSlider">Καθυστέρηση πριν ξανανέβει — <span id="duckHoldValue">0.5s</span></label>
+              <input id="duckHoldSlider" type="range" min="200" max="1500" step="100" value="500" />
+            </div>
           </div>
         </div>
       </div>
@@ -396,6 +402,6 @@
   <!-- ?v=N cache-busts app.js — phones (iOS Safari especially) can hold a
        stale cached copy for a long time otherwise. Bump N whenever app.js
        changes. -->
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
