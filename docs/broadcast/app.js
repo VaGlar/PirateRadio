@@ -123,7 +123,10 @@ const inboxEl = document.getElementById('inbox');
 const inboxListEl = document.getElementById('inboxList');
 const sysAudioCheck = document.getElementById('sysAudioCheck');
 const mixSliderWrap = document.getElementById('mixSliderWrap');
-const mixSliderEl = document.getElementById('mixSlider');
+const micVolumeSlider = document.getElementById('micVolumeSlider');
+const micVolumeValue = document.getElementById('micVolumeValue');
+const musicVolumeSlider = document.getElementById('musicVolumeSlider');
+const musicVolumeValue = document.getElementById('musicVolumeValue');
 const duckToggle = document.getElementById('duckToggle');
 const output1Select = document.getElementById('output1Select');
 const output2Select = document.getElementById('output2Select');
@@ -367,19 +370,20 @@ function rampGain(node, target, duration = MIX_RAMP_SEC) {
 
 // Mic capture (with echoCancellation/AGC deliberately off — see acquireStream)
 // is naturally much quieter than tab/system audio, which is usually already
-// loudness-normalized. Without correcting for that, "50/50" on the slider
-// sounds like mostly music. These multipliers only kick in once music is
-// actually attached — solo mic broadcasts are unaffected. Starting values;
-// nudge them if the balance still feels off either way.
+// loudness-normalized. Without correcting for that, mic and music at their
+// slider "100%" wouldn't actually sound balanced. These multipliers only
+// kick in once music is actually attached — solo mic broadcasts are
+// unaffected. Starting values; nudge them if the balance still feels off.
 const MIC_MAKEUP_GAIN = 2.0;
 const MUSIC_GAIN_SCALE = 0.6;
 
-// Auto-ducking: instead of having to manually ride the crossfader every
-// time you start/stop talking over music, the music gain gets multiplied
-// down automatically while a mic is actively picking up voice, and eased
-// back up once you've been quiet for a bit. The crossfader still sets the
-// baseline mix when nobody's talking — ducking is a temporary multiplier
-// on top of that, not a replacement for it.
+// Auto-ducking: instead of having to manually manage the mic/music balance
+// while also picking songs, the music gain gets multiplied down
+// automatically while a mic is actively picking up voice, and eased back
+// up once you've been quiet for a bit. The music volume slider still sets
+// the baseline level for when nobody's talking — ducking is a temporary
+// multiplier on top of that, not a replacement for it. On by default —
+// this is the normal way to run the mix now, not an opt-in extra.
 // `let`, not `const` — adjustable live via the "Ρυθμίσεις ducking" sliders
 // below instead of being fixed values only I can change in code.
 let DUCK_THRESHOLD = 12; // mic meter % that counts as "talking" — slightly above LAMP_THRESHOLD's noise-floor cutoff
@@ -391,26 +395,53 @@ const DUCK_RELEASE_SEC = 0.6; // slower duck-out, reads as a smooth recovery ins
 let duckActive = false;
 let duckHoldTimer = null;
 
+// Mic stays at full volume (independent of the slider) until music is
+// actually attached — there's nothing to balance against yet.
+function applyMicGain() {
+  const level = sysGainNode ? (Number(micVolumeSlider.value) / 100) * MIC_MAKEUP_GAIN : 1;
+  rampGain(micGainNode, level);
+  rampGain(mic2GainNode, level);
+}
+
 function applyMusicGain() {
   if (!sysGainNode) return;
-  const pos = Number(mixSliderEl.value) / 100;
-  let target = Math.sin((pos * Math.PI) / 2) * MUSIC_GAIN_SCALE;
+  let target = (Number(musicVolumeSlider.value) / 100) * MUSIC_GAIN_SCALE;
   if (duckToggle.checked && duckActive) target *= DUCK_AMOUNT;
   rampGain(sysGainNode, target, duckActive ? DUCK_ATTACK_SEC : DUCK_RELEASE_SEC);
 }
 
 function updateMixGains() {
-  const pos = Number(mixSliderEl.value) / 100;
-  if (sysGainNode) {
-    rampGain(micGainNode, Math.cos((pos * Math.PI) / 2) * MIC_MAKEUP_GAIN);
-    rampGain(mic2GainNode, Math.cos((pos * Math.PI) / 2) * MIC_MAKEUP_GAIN);
-    applyMusicGain();
-  } else {
-    rampGain(micGainNode, 1);
-    rampGain(mic2GainNode, 1);
-  }
+  applyMicGain();
+  applyMusicGain();
 }
-mixSliderEl.addEventListener('input', updateMixGains);
+
+// Press-anywhere-and-drag instead of relying on the browser to detect a
+// grab on the (small) native thumb — this is what actually fixes sliders
+// feeling "stuck", not just a bigger thumb: no need to land on an exact
+// pixel. 'input' covers keyboard arrow-key adjustment too.
+function wireVolumeSlider(el, valueEl, onChange) {
+  function apply(clientX) {
+    const rect = el.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    el.value = String(Math.round(pct * 100));
+    valueEl.textContent = el.value + '%';
+    onChange();
+  }
+  el.addEventListener('input', () => {
+    valueEl.textContent = el.value + '%';
+    onChange();
+  });
+  el.addEventListener('pointerdown', (e) => {
+    el.setPointerCapture(e.pointerId);
+    apply(e.clientX);
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (e.buttons !== 1) return;
+    apply(e.clientX);
+  });
+}
+wireVolumeSlider(micVolumeSlider, micVolumeValue, applyMicGain);
+wireVolumeSlider(musicVolumeSlider, musicVolumeValue, applyMusicGain);
 
 function resetDuckState() {
   duckActive = false;
@@ -428,10 +459,6 @@ const duckHoldValue = document.getElementById('duckHoldValue');
 
 duckToggle.addEventListener('change', () => {
   duckSettingsWrap.style.display = duckToggle.checked ? 'block' : 'none';
-  // With auto-ducking on, the crossfader's manual position isn't something
-  // you need to keep managing by hand anymore — disable it instead of
-  // leaving it there to fiddle with while ducking is doing the work.
-  mixSliderEl.disabled = duckToggle.checked;
   if (!duckToggle.checked) {
     resetDuckState();
     applyMusicGain();
@@ -451,27 +478,6 @@ duckAmountSlider.addEventListener('input', () => {
 duckHoldSlider.addEventListener('input', () => {
   DUCK_HOLD_MS = Number(duckHoldSlider.value);
   duckHoldValue.textContent = (DUCK_HOLD_MS / 1000).toFixed(1) + 's';
-});
-
-// Drive the slider directly from pointer position instead of relying on the
-// browser to detect a grab on the (small) native thumb — press down
-// anywhere across the control and it jumps + drags from there immediately,
-// tracking the pointer 1:1 for as long as the button stays down. This is
-// what actually fixes "it gets stuck and won't slide", not just a bigger
-// thumb: you no longer need to land on the thumb pixel at all.
-function setMixFromClientX(clientX) {
-  const rect = mixSliderEl.getBoundingClientRect();
-  const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-  mixSliderEl.value = String(Math.round(pct));
-  updateMixGains();
-}
-mixSliderEl.addEventListener('pointerdown', (e) => {
-  mixSliderEl.setPointerCapture(e.pointerId);
-  setMixFromClientX(e.clientX);
-});
-mixSliderEl.addEventListener('pointermove', (e) => {
-  if (e.buttons !== 1) return;
-  setMixFromClientX(e.clientX);
 });
 
 function attachMic(newStream) {

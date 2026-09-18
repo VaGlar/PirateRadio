@@ -137,7 +137,6 @@
   .controlsRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .checkRow input { width: auto; margin: 0; accent-color: var(--gold); }
   #mixSliderWrap { display: none; margin-top: 10px; }
-  #mixSliderWrap .labels { display: flex; justify-content: space-between; font-size: 0.74rem; color: var(--muted); }
 
   /* Bigger track + thumb than the browser default — the tiny native thumb
      is an easy-to-miss target, especially with a trackpad, which is what
@@ -348,13 +347,15 @@
           </div>
         </div>
         <div id="mixSliderWrap">
-          <div class="labels"><span>🎤 Μικρόφωνο</span><span>🎵 Μουσική</span></div>
-          <input id="mixSlider" type="range" min="0" max="100" step="1" value="50" />
+          <label for="micVolumeSlider">🎤 Ένταση μικροφώνου — <span id="micVolumeValue">100%</span></label>
+          <input id="micVolumeSlider" type="range" min="0" max="100" step="5" value="100" />
+          <label for="musicVolumeSlider">🎵 Ένταση μουσικής — <span id="musicVolumeValue">100%</span></label>
+          <input id="musicVolumeSlider" type="range" min="0" max="100" step="5" value="100" />
           <div class="checkRow">
-            <input id="duckToggle" type="checkbox" />
+            <input id="duckToggle" type="checkbox" checked />
             <label for="duckToggle" style="margin:0">🎚️ Αυτόματη μείωση μουσικής κατά την ομιλία</label>
           </div>
-          <div id="duckSettingsWrap" style="display:none">
+          <div id="duckSettingsWrap">
             <label for="duckThresholdSlider">Ευαισθησία (πόσο δυνατά πρέπει να μιλήσεις) — <span id="duckThresholdValue">12</span></label>
             <input id="duckThresholdSlider" type="range" min="5" max="30" step="1" value="12" />
             <label for="duckAmountSlider">Πόσο χαμηλώνει η μουσική — <span id="duckAmountValue">30%</span></label>
@@ -395,6 +396,6 @@
   <!-- ?v=N cache-busts app.js — phones (iOS Safari especially) can hold a
        stale cached copy for a long time otherwise. Bump N whenever app.js
        changes. -->
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>
