@@ -171,6 +171,11 @@
     cursor: grab;
   }
   input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; }
+  /* Custom thumb/track override the browser's own disabled dimming, so
+     spell it out explicitly — used when auto-ducking takes over the mix. */
+  input[type="range"]:disabled { opacity: 0.4; cursor: not-allowed; }
+  input[type="range"]:disabled::-webkit-slider-thumb { cursor: not-allowed; }
+  input[type="range"]:disabled::-moz-range-thumb { cursor: not-allowed; }
   input[type="range"]::-moz-range-track {
     height: 10px;
     border-radius: 6px;
@@ -390,6 +395,6 @@
   <!-- ?v=N cache-busts app.js — phones (iOS Safari especially) can hold a
        stale cached copy for a long time otherwise. Bump N whenever app.js
        changes. -->
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

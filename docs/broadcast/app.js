@@ -428,6 +428,10 @@ const duckHoldValue = document.getElementById('duckHoldValue');
 
 duckToggle.addEventListener('change', () => {
   duckSettingsWrap.style.display = duckToggle.checked ? 'block' : 'none';
+  // With auto-ducking on, the crossfader's manual position isn't something
+  // you need to keep managing by hand anymore — disable it instead of
+  // leaving it there to fiddle with while ducking is doing the work.
+  mixSliderEl.disabled = duckToggle.checked;
   if (!duckToggle.checked) {
     resetDuckState();
     applyMusicGain();
