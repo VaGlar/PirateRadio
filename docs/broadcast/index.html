@@ -345,6 +345,10 @@
         <div id="mixSliderWrap">
           <div class="labels"><span>🎤 Μικρόφωνο</span><span>🎵 Μουσική</span></div>
           <input id="mixSlider" type="range" min="0" max="100" step="1" value="50" />
+          <div class="checkRow">
+            <input id="duckToggle" type="checkbox" />
+            <label for="duckToggle" style="margin:0">🎚️ Αυτόματο χαμήλωμα μουσικής όταν μιλάω</label>
+          </div>
         </div>
       </div>
 
@@ -378,6 +382,6 @@
   <!-- ?v=N cache-busts app.js — phones (iOS Safari especially) can hold a
        stale cached copy for a long time otherwise. Bump N whenever app.js
        changes. -->
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

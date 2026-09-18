@@ -124,6 +124,7 @@ const inboxListEl = document.getElementById('inboxList');
 const sysAudioCheck = document.getElementById('sysAudioCheck');
 const mixSliderWrap = document.getElementById('mixSliderWrap');
 const mixSliderEl = document.getElementById('mixSlider');
+const duckToggle = document.getElementById('duckToggle');
 const output1Select = document.getElementById('output1Select');
 const output2Select = document.getElementById('output2Select');
 const monitorAudio1 = document.getElementById('monitorAudio1');
@@ -265,6 +266,26 @@ function startMeterLoop() {
     lamp2.classList.toggle('on', on2);
     liveLamp2.classList.toggle('on', on2);
 
+    if (duckToggle.checked && sysGainNode) {
+      const talking = level1 > DUCK_THRESHOLD || level2 > DUCK_THRESHOLD;
+      if (talking) {
+        if (duckHoldTimer) {
+          clearTimeout(duckHoldTimer);
+          duckHoldTimer = null;
+        }
+        if (!duckActive) {
+          duckActive = true;
+          applyMusicGain();
+        }
+      } else if (duckActive && !duckHoldTimer) {
+        duckHoldTimer = setTimeout(() => {
+          duckHoldTimer = null;
+          duckActive = false;
+          applyMusicGain();
+        }, DUCK_HOLD_MS);
+      }
+    }
+
     meterRAF = requestAnimationFrame(tick);
   };
   tick();
@@ -336,12 +357,12 @@ output2Select.addEventListener('change', () => applyOutputDevice(monitorAudio2, 
 // calls during a drag each start cleanly from wherever the ramp actually is
 // right now instead of stacking on top of each other.
 const MIX_RAMP_SEC = 0.2;
-function rampGain(node, target) {
+function rampGain(node, target, duration = MIX_RAMP_SEC) {
   if (!node || !audioCtx) return;
   const now = audioCtx.currentTime;
   node.gain.cancelScheduledValues(now);
   node.gain.setValueAtTime(node.gain.value, now);
-  node.gain.linearRampToValueAtTime(target, now + MIX_RAMP_SEC);
+  node.gain.linearRampToValueAtTime(target, now + duration);
 }
 
 // Mic capture (with echoCancellation/AGC deliberately off — see acquireStream)
@@ -353,18 +374,54 @@ function rampGain(node, target) {
 const MIC_MAKEUP_GAIN = 2.0;
 const MUSIC_GAIN_SCALE = 0.6;
 
+// Auto-ducking: instead of having to manually ride the crossfader every
+// time you start/stop talking over music, the music gain gets multiplied
+// down automatically while a mic is actively picking up voice, and eased
+// back up once you've been quiet for a bit. The crossfader still sets the
+// baseline mix when nobody's talking — ducking is a temporary multiplier
+// on top of that, not a replacement for it.
+const DUCK_THRESHOLD = 12; // mic meter % that counts as "talking" — slightly above LAMP_THRESHOLD's noise-floor cutoff
+const DUCK_AMOUNT = 0.3; // music drops to this fraction of its slider-set level while ducked
+const DUCK_HOLD_MS = 500; // stay ducked this long after speech stops, so brief pauses between words don't un-duck and re-duck
+const DUCK_ATTACK_SEC = 0.1; // fast duck-in, so music doesn't cover the start of a sentence
+const DUCK_RELEASE_SEC = 0.6; // slower duck-out, reads as a smooth recovery instead of a jump
+
+let duckActive = false;
+let duckHoldTimer = null;
+
+function applyMusicGain() {
+  if (!sysGainNode) return;
+  const pos = Number(mixSliderEl.value) / 100;
+  let target = Math.sin((pos * Math.PI) / 2) * MUSIC_GAIN_SCALE;
+  if (duckToggle.checked && duckActive) target *= DUCK_AMOUNT;
+  rampGain(sysGainNode, target, duckActive ? DUCK_ATTACK_SEC : DUCK_RELEASE_SEC);
+}
+
 function updateMixGains() {
   const pos = Number(mixSliderEl.value) / 100;
   if (sysGainNode) {
     rampGain(micGainNode, Math.cos((pos * Math.PI) / 2) * MIC_MAKEUP_GAIN);
     rampGain(mic2GainNode, Math.cos((pos * Math.PI) / 2) * MIC_MAKEUP_GAIN);
-    rampGain(sysGainNode, Math.sin((pos * Math.PI) / 2) * MUSIC_GAIN_SCALE);
+    applyMusicGain();
   } else {
     rampGain(micGainNode, 1);
     rampGain(mic2GainNode, 1);
   }
 }
 mixSliderEl.addEventListener('input', updateMixGains);
+
+function resetDuckState() {
+  duckActive = false;
+  if (duckHoldTimer) clearTimeout(duckHoldTimer);
+  duckHoldTimer = null;
+}
+
+duckToggle.addEventListener('change', () => {
+  if (!duckToggle.checked) {
+    resetDuckState();
+    applyMusicGain();
+  }
+});
 
 // Drive the slider directly from pointer position instead of relying on the
 // browser to detect a grab on the (small) native thumb — press down
@@ -475,6 +532,7 @@ function detachSysAudio() {
   sysGainNode = null;
   if (sysStream) sysStream.getTracks().forEach((t) => t.stop());
   sysStream = null;
+  resetDuckState(); // no music left to duck
   updateMixGains(); // back to mic-only, full volume
   mixSliderWrap.style.display = 'none';
 }
