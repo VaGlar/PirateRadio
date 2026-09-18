@@ -208,12 +208,16 @@ function ensureAudioGraph() {
   // what "πολύ πρίμα"/harsh-thin-distorted sound is: it chops the peaks
   // off the waveform, which adds harsh high-frequency harmonics. A limiter
   // on the combined signal keeps peaks under control instead.
+  // Kept close to 0dB/high-ratio (a true peak limiter, not general
+  // compression) — an earlier, more aggressive setting (-6dB/20:1) reacted
+  // to ordinary loud song passages, not just real peaks, which read as the
+  // music's volume audibly pumping up and down even with no one talking.
   limiter = audioCtx.createDynamicsCompressor();
-  limiter.threshold.value = -6;
-  limiter.knee.value = 6;
-  limiter.ratio.value = 20;
-  limiter.attack.value = 0.002;
-  limiter.release.value = 0.15;
+  limiter.threshold.value = -3;
+  limiter.knee.value = 3;
+  limiter.ratio.value = 10;
+  limiter.attack.value = 0.003;
+  limiter.release.value = 0.25;
 
   // The limiter's fast 2ms attack (needed to catch clipping peaks) also
   // emphasizes sibilance — harsh "s"/"sh" hiss — since those are exactly
