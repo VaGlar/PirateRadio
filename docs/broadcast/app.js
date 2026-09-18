@@ -241,6 +241,7 @@ function meterLevel(an, buf) {
 }
 
 const LAMP_THRESHOLD = 8; // % level considered "live sound", not just noise floor
+const CLIP_THRESHOLD = 85; // % level that flags the meter red — signal is hot enough to be worth checking before it hits the limiter
 
 function startMeterLoop() {
   const buf1 = new Uint8Array(micAnalyser.frequencyBinCount);
@@ -248,12 +249,14 @@ function startMeterLoop() {
   const tick = () => {
     const level1 = meterLevel(micAnalyser, buf1);
     meterBar.style.width = level1 + '%';
+    meterBar.classList.toggle('clip', level1 > CLIP_THRESHOLD);
     const on1 = level1 > LAMP_THRESHOLD;
     lamp1.classList.toggle('on', on1);
     liveLamp1.classList.toggle('on', on1);
 
     const level2 = meterLevel(mic2Analyser, buf2);
     meter2Bar.style.width = level2 + '%';
+    meter2Bar.classList.toggle('clip', level2 > CLIP_THRESHOLD);
     const on2 = level2 > LAMP_THRESHOLD;
     lamp2.classList.toggle('on', on2);
     liveLamp2.classList.toggle('on', on2);

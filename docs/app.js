@@ -43,21 +43,33 @@ const airplayBtn = document.getElementById('airplayBtn');
 // to stop, so auto-reconnect only kicks in while this stays true.
 let listenerWantsPlay = false;
 
+// 'play' fires as soon as play() is called, well before a live stream
+// actually has audio buffered — showing ⏸ immediately made it look like
+// nothing happened during that gap. ⏳ marks the button as loading until
+// 'playing' (audio actually flowing) fires, and again on 'waiting' if
+// playback stalls mid-stream for the same reason.
+function setPlayBtnLoading() {
+  playBtn.textContent = '⏳';
+  playBtn.setAttribute('aria-label', 'Φόρτωση');
+}
 playBtn.addEventListener('click', () => {
   if (radioPlayer.paused) {
     listenerWantsPlay = true;
+    setPlayBtnLoading();
     radioPlayer.play().catch(() => {});
   } else {
     listenerWantsPlay = false;
     radioPlayer.pause();
   }
 });
-radioPlayer.addEventListener('play', () => { playBtn.textContent = '⏸'; playBtn.setAttribute('aria-label', 'Pause'); });
+radioPlayer.addEventListener('playing', () => { playBtn.textContent = '⏸'; playBtn.setAttribute('aria-label', 'Pause'); });
+radioPlayer.addEventListener('waiting', () => { if (listenerWantsPlay) setPlayBtnLoading(); });
 radioPlayer.addEventListener('pause', () => { playBtn.textContent = '▶'; playBtn.setAttribute('aria-label', 'Play'); });
 
 function reloadAndPlay() {
   radioPlayer.pause();
   radioPlayer.load();
+  setPlayBtnLoading();
   radioPlayer.play().catch(() => {});
 }
 

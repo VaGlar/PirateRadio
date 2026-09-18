@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Pirate Radio — On Air</title>
+<link rel="icon" type="image/png" href="../assets/pirate-flag.png" />
 <style>
   :root {
     --bg: #1c1917;
@@ -80,6 +81,7 @@
   .meterRow { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; }
   .meterRow .meterWrap { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; height: 14px; overflow: hidden; }
   .meterRow .meterBar { background: var(--gold); height: 100%; width: 0%; transition: width 60ms linear; }
+  .meterRow .meterBar.clip { background: var(--red); }
 
   .lamp {
     flex: 0 0 auto;
@@ -376,6 +378,6 @@
   <!-- ?v=N cache-busts app.js — phones (iOS Safari especially) can hold a
        stale cached copy for a long time otherwise. Bump N whenever app.js
        changes. -->
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
