@@ -1,6 +1,7 @@
 const MIME_TYPE = 'audio/webm;codecs=opus';
 const BRIDGE_URL = 'wss://pirateradio-bridge.fly.dev';
 const ICECAST_STATUS_URL = 'https://pirateradio-icecast.fly.dev/status-json.xsl';
+const ORIGINAL_TITLE = document.title;
 
 // Running on battery makes Windows/Chrome throttle CPU and audio-processing
 // priority to save power — that's a common real cause of crackling/glitches
@@ -155,6 +156,7 @@ let onAirAt = 0;
 let elapsedTimer = null;
 let statsTimer = null;
 let peakListeners = 0;
+let chatMessageCount = 0; // for the Off Air recap
 let isMuted = false;
 let recordedChunks = []; // local-only copy of the broadcast audio, offered as a download when the show ends — no server storage, no cost
 
@@ -732,6 +734,7 @@ function updateListenerRoster(names) {
 }
 
 function addChatMessage(msg) {
+  chatMessageCount += 1;
   const empty = document.getElementById('inboxEmpty');
   if (empty) empty.remove();
 
@@ -759,6 +762,7 @@ function goLive() {
   liveControlsEl.style.display = 'block';
   setMuted(false); // also resets/syncs both host mute pills to live
   statusEl.textContent = 'Ζωντανά τώρα';
+  document.title = '🔴 ON AIR — Pirate Radio';
 
   hostName1El.textContent = name1Input.value.trim() || 'Παραγωγός 1';
   hostRow2El.style.display = mic2Check.checked ? 'flex' : 'none';
@@ -769,6 +773,7 @@ function goLive() {
 
   onAirAt = Date.now();
   peakListeners = 0;
+  chatMessageCount = 0;
   liveStatsEl.style.display = 'block';
   inboxEl.style.display = 'flex'; // matches #inbox's flex-column CSS so the message list can stretch to fill the column
   inboxListEl.innerHTML = '<div id="inboxEmpty">Κανένα μήνυμα ακόμα.</div>';
@@ -823,6 +828,15 @@ function offerRecordingDownload() {
 }
 
 function cleanup() {
+  // Recap before anything gets reset — skip it if we never actually went
+  // live (e.g. cleanup() fired from an early auth error).
+  if (onAirAt > 0) {
+    const duration = formatElapsed(Date.now() - onAirAt);
+    alert(`📊 Σύνοψη εκπομπής\n\nΔιάρκεια: ${duration}\nPeak ακροατές: ${peakListeners}\nΜηνύματα: ${chatMessageCount}`);
+  }
+  onAirAt = 0;
+  document.title = ORIGINAL_TITLE;
+
   if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
   if (stream) stream.getTracks().forEach((t) => t.stop());
   detachMic2(); // stops mic 2's tracks too; leaves the checkbox as-is so it auto-reconnects next broadcast

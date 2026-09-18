@@ -2,13 +2,15 @@ const BRIDGE_URL = 'wss://pirateradio-bridge.fly.dev';
 const ICECAST_STATUS_URL = 'https://pirateradio-icecast.fly.dev/status-json.xsl';
 
 // Neon "ON AIR" sign lights up while the listener is actually playing —
-// simplest possible signal, no extra polling needed.
+// simplest possible signal, no extra polling needed. The tab title flips
+// to match too, so a backgrounded tab is still noticeable in the tab bar.
+const ORIGINAL_TITLE = document.title;
 const onairSign = document.getElementById('onairSign');
 const radioPlayer = document.getElementById('radioPlayer');
-radioPlayer.addEventListener('play', () => onairSign.classList.add('lit'));
-radioPlayer.addEventListener('pause', () => onairSign.classList.remove('lit'));
-radioPlayer.addEventListener('ended', () => onairSign.classList.remove('lit'));
-radioPlayer.addEventListener('error', () => onairSign.classList.remove('lit'));
+radioPlayer.addEventListener('play', () => { onairSign.classList.add('lit'); document.title = '🔴 LIVE — Pirate Radio'; });
+radioPlayer.addEventListener('pause', () => { onairSign.classList.remove('lit'); document.title = ORIGINAL_TITLE; });
+radioPlayer.addEventListener('ended', () => { onairSign.classList.remove('lit'); document.title = ORIGINAL_TITLE; });
+radioPlayer.addEventListener('error', () => { onairSign.classList.remove('lit'); document.title = ORIGINAL_TITLE; });
 
 // Custom player bar (play/pause, reload, volume, mute, AirPlay) instead of
 // the native <audio controls> UI — the native one exposes a "..." overflow
