@@ -130,6 +130,10 @@ const monitorAudio1 = document.getElementById('monitorAudio1');
 const monitorAudio2 = document.getElementById('monitorAudio2');
 
 let ws = null;
+let broadcastPassword = ''; // remembered so a dropped connection can re-auth automatically
+let shouldStayLive = false; // true once on-air; false only via an explicit Off Air or a hard error — drives whether ws.onclose reconnects or gives up
+let intentionalClose = false; // set right before we call ws.close() ourselves, so that onclose doesn't also treat it as an unexpected drop
+let reconnectTimer = null;
 let mediaRecorder = null;
 let stream = null; // raw mic 1 MediaStream (mute toggles tracks on this)
 let mic2Stream = null; // raw mic 2 MediaStream — second co-host, same laptop
@@ -671,6 +675,63 @@ test2Btn.addEventListener('click', async () => {
   }
 });
 
+// Opens a fresh WebSocket and authenticates — used both for the initial
+// "On Air" and, if the connection drops unexpectedly mid-show, for
+// reconnecting automatically without tearing down the mic/audio graph or
+// bouncing the broadcaster back to the setup screen (the WiFi-hiccup
+// equivalent of the listener page's own auto-reconnect).
+function connectAndAuth() {
+  ws = new WebSocket(BRIDGE_URL);
+  ws.binaryType = 'arraybuffer';
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'auth', password: broadcastPassword }));
+  };
+
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.type === 'on-air') {
+      if (shouldStayLive) {
+        // Reconnected after a drop — the MediaRecorder/audio graph never
+        // stopped, so just clear the "reconnecting" status and resume.
+        statusEl.textContent = 'Ζωντανά τώρα';
+        errorEl.textContent = '';
+      } else {
+        shouldStayLive = true;
+        goLive();
+      }
+    } else if (msg.type === 'error') {
+      shouldStayLive = false;
+      errorEl.textContent = msg.message;
+      cleanup();
+    } else if (msg.type === 'chat-message') {
+      addChatMessage(msg);
+    } else if (msg.type === 'listener-roster') {
+      updateListenerRoster(msg.names);
+    }
+  };
+
+  ws.onerror = () => {
+    errorEl.textContent = 'Πρόβλημα σύνδεσης με το bridge.';
+  };
+
+  ws.onclose = () => {
+    if (intentionalClose) {
+      intentionalClose = false;
+      return; // cleanup() (or an error path) already handled everything
+    }
+    if (shouldStayLive) {
+      statusEl.textContent = '🔄 Κόπηκε η σύνδεση — επανασύνδεση...';
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        if (shouldStayLive) connectAndAuth();
+      }, 3000);
+    } else {
+      cleanup();
+    }
+  };
+}
+
 startBtn.addEventListener('click', async () => {
   errorEl.textContent = '';
   const password = document.getElementById('password').value;
@@ -697,34 +758,8 @@ startBtn.addEventListener('click', async () => {
     return;
   }
 
-  ws = new WebSocket(BRIDGE_URL);
-  ws.binaryType = 'arraybuffer';
-
-  ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'auth', password }));
-  };
-
-  ws.onmessage = (event) => {
-    const msg = JSON.parse(event.data);
-    if (msg.type === 'on-air') {
-      goLive();
-    } else if (msg.type === 'error') {
-      errorEl.textContent = msg.message;
-      cleanup();
-    } else if (msg.type === 'chat-message') {
-      addChatMessage(msg);
-    } else if (msg.type === 'listener-roster') {
-      updateListenerRoster(msg.names);
-    }
-  };
-
-  ws.onerror = () => {
-    errorEl.textContent = 'Πρόβλημα σύνδεσης με το bridge.';
-  };
-
-  ws.onclose = () => {
-    cleanup();
-  };
+  broadcastPassword = password;
+  connectAndAuth();
 });
 
 function updateListenerRoster(names) {
@@ -831,6 +866,13 @@ function offerRecordingDownload() {
 }
 
 function cleanup() {
+  // Whatever brought us here (explicit Off Air, a hard error, giving up on
+  // reconnecting) — from this point on, a socket closing is intentional,
+  // not a drop to recover from.
+  shouldStayLive = false;
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = null;
+
   // Recap before anything gets reset — skip it if we never actually went
   // live (e.g. cleanup() fired from an early auth error).
   if (onAirAt > 0) {
@@ -846,7 +888,10 @@ function cleanup() {
   detachSysAudio();
   sysAudioCheck.checked = false;
   teardownDualMonitor();
-  if (ws) ws.close();
+  if (ws) {
+    intentionalClose = true;
+    ws.close();
+  }
 
   if (meterRAF) cancelAnimationFrame(meterRAF);
   meterRAF = null;
