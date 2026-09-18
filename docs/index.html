@@ -90,7 +90,11 @@
   #chatBox h2 { font-size: 0.9rem; font-weight: 600; color: var(--muted); text-align: center; margin: 0 0 10px; }
   #chatStatus { font-size: 0.8rem; color: var(--muted); text-align: center; min-height: 1.2em; margin-top: 6px; }
 
-  #chatList { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  /* Scales with the viewport instead of a fixed pixel height — a fixed
+     260px was fine on a desktop monitor but ate most of a phone screen
+     (especially with the on-screen keyboard up), leaving barely any room
+     for the compose box below it. clamp() keeps it sane at both ends. */
+  #chatList { max-height: clamp(140px, 30vh, 320px); overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
   #chatList .msg { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; }
   #chatList .msg .name { font-weight: bold; color: var(--gold); }
   #chatList .msg .time { float: right; color: var(--muted); font-size: 0.75rem; }
