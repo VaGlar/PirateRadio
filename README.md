@@ -1,5 +1,13 @@
 # 🏴‍☠️ PirateRadio
 
+> ⚠️ **Current status: offline.** The Fly.io apps (`pirateradio-icecast` and
+> `pirateradio-bridge`) were deleted to stop the billing — nothing is
+> deployed right now. Before broadcasting works again, redo the Fly.io
+> setup from "Deploy" below (new apps, re-add the `FLY_API_TOKEN` +
+> Icecast secrets as GitHub repo secrets if they were removed too, then
+> re-run the `deploy-icecast`/`deploy-bridge` GitHub Actions workflows).
+> Nothing in the code is broken — this is a deploy/infra gap, not a bug.
+
 Live radio from the browser. One or two broadcasters open a page, hit "On
 Air", and listeners tune in from a plain link — no install on their end.
 
